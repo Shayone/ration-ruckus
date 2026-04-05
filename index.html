@@ -144,10 +144,17 @@ function hasPendingState(g){
   return g.pendingSabotage||g.pendingReaction||g.pendingForesight||g.pendingNightmare;
 }
 
+async function freshGame(){
+  try{
+    var f=await DB.get(S.code);
+    if(f){S.game=f;return JSON.parse(JSON.stringify(f));}
+  }catch(e){console.error("freshGame fetch error",e);}
+  return JSON.parse(JSON.stringify(S.game));
+}
+
 window.drawAction=async function(){
-  var fresh=await DB.get(S.code);
-  var g=fresh?JSON.parse(JSON.stringify(fresh)):JSON.parse(JSON.stringify(S.game));
-  if(g.pendingReaction){set({game:g});return;} // Only block on active reaction timer
+  var g=await freshGame();
+  if(g.pendingReaction)return;
   var i=S.myIdx;
   if(g.actionDeck.length>0){g.players[i].actions.push(g.actionDeck.shift());g.log.push({msg:S.name+" drew an Action card.",type:"system"});}
   else{g.log.push({msg:"Action deck empty!",type:"warning"});}
@@ -177,7 +184,7 @@ window.playCard=function(ci){
 };
 
 window.execShelter=async function(ci){
-  var g=JSON.parse(JSON.stringify(S.game)),i=S.myIdx;
+  var g=await freshGame(),i=S.myIdx;
   g.discardAction.push(g.players[i].actions.splice(ci,1)[0]);
   g.players[i].sheltered=true;
   g.log.push({msg:S.name+" activated Shelter! Protected from the next Event.",type:"good"});
@@ -186,7 +193,7 @@ window.execShelter=async function(ci){
 
 // ═══ FORESIGHT — peek top 3 events, pick 1 for top, rest go to bottom ═══
 window.execForesight=async function(ci){
-  var g=JSON.parse(JSON.stringify(S.game)),i=S.myIdx;
+  var g=await freshGame(),i=S.myIdx;
   g.discardAction.push(g.players[i].actions.splice(ci,1)[0]);
   if(g.eventDeck.length===0){
     g.log.push({msg:S.name+" used Foresight but the Event deck is empty!",type:"warning"});
@@ -199,7 +206,7 @@ window.execForesight=async function(ci){
   g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
 };
 window.foresightPick=async function(cardIdx){
-  var g=JSON.parse(JSON.stringify(S.game));
+  var g=await freshGame();
   var pf=g.pendingForesight;
   if(!pf||pf.playerIdx!==S.myIdx)return;
   var picked=pf.cards.splice(cardIdx,1)[0];
@@ -213,7 +220,7 @@ window.foresightPick=async function(cardIdx){
 
 // ═══ COLLATERAL DAMAGE — you + 2 others each lose 1 supply ═══
 window.execCollateral=async function(targets){
-  var pt=S.pTarget,g=JSON.parse(JSON.stringify(S.game)),i=S.myIdx;
+  var pt=S.pTarget,g=await freshGame(),i=S.myIdx;
   g.discardAction.push(g.players[i].actions.splice(pt.ci,1)[0]);
   // Self loses 1 supply
   if(g.players[i].supply.length>0){
@@ -252,7 +259,7 @@ window.collateralConfirm=function(){
 
 // ═══ RECURRING NIGHTMARE — replay a discarded event, you're immune ═══
 window.execRecurringNightmare=async function(ci){
-  var g=JSON.parse(JSON.stringify(S.game)),i=S.myIdx;
+  var g=await freshGame(),i=S.myIdx;
   if(g.discardEvent.length===0){
     g.log.push({msg:S.name+" tried Recurring Nightmare but no Events have been discarded!",type:"warning"});
     return;
@@ -263,7 +270,7 @@ window.execRecurringNightmare=async function(ci){
   g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
 };
 window.nightmarePick=async function(eventIdx){
-  var g=JSON.parse(JSON.stringify(S.game));
+  var g=await freshGame();
   var pn=g.pendingNightmare;
   if(!pn||pn.playerIdx!==S.myIdx)return;
   var chosenEvent=pn.events[eventIdx];
@@ -282,7 +289,7 @@ window.nightmarePick=async function(eventIdx){
 
 // ═══ SCAVENGER — draw 1 Supply + 1 Action per total eliminated player ═══
 window.execScavenger=async function(ci){
-  var g=JSON.parse(JSON.stringify(S.game)),i=S.myIdx;
+  var g=await freshGame(),i=S.myIdx;
   var deadCount=g.players.filter(function(p){return p.eliminated;}).length;
   g.discardAction.push(g.players[i].actions.splice(ci,1)[0]);
   if(deadCount===0){
@@ -301,7 +308,7 @@ window.execScavenger=async function(ci){
 
 // ═══ COIN TOSS — flip coin, heads: you gain they lose, tails: they gain you lose ═══
 window.execCoinToss=async function(ti){
-  var pt=S.pTarget,g=JSON.parse(JSON.stringify(S.game)),i=S.myIdx;
+  var pt=S.pTarget,g=await freshGame(),i=S.myIdx;
   g.discardAction.push(g.players[i].actions.splice(pt.ci,1)[0]);
   var tn=g.players[ti].name;
   var heads=Math.random()<0.5;
@@ -320,14 +327,14 @@ window.execCoinToss=async function(ti){
 };
 
 window.execScrounge=async function(ci){
-  var g=JSON.parse(JSON.stringify(S.game)),i=S.myIdx;
+  var g=await freshGame(),i=S.myIdx;
   g.discardAction.push(g.players[i].actions.splice(ci,1)[0]);
   if(g.supplyDeck.length>0){var d=g.supplyDeck.shift();g.players[i].supply.push(d);g.log.push({msg:S.name+" scrounged "+d.name+"!",type:"good"});}
   else{g.log.push({msg:"Supply deck empty!",type:"warning"});}
   g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
 };
 window.execHustle=async function(ci){
-  var g=JSON.parse(JSON.stringify(S.game)),i=S.myIdx;
+  var g=await freshGame(),i=S.myIdx;
   g.discardAction.push(g.players[i].actions.splice(ci,1)[0]);
   var d=0;for(var j=0;j<2;j++)if(g.actionDeck.length>0){g.players[i].actions.push(g.actionDeck.shift());d++;}
   g.log.push({msg:S.name+" hustled and drew "+d+" Action card"+(d!==1?"s":"")+"!",type:"good"});
@@ -362,7 +369,7 @@ window.execTargeted=async function(ti){
     return;
   }
 
-  var g=JSON.parse(JSON.stringify(S.game)),i=S.myIdx;
+  var g=await freshGame(),i=S.myIdx;
   var played=g.players[i].actions.splice(pt.ci,1)[0];
   g.discardAction.push(played);
   var tn=g.players[ti].name;
@@ -429,7 +436,7 @@ function resolveTargetedEffect(g, cardName, attackerIdx, targetIdx){
 
 // Player uses Boomerang — redirect to a new target
 window.useBoomerang=async function(newTargetIdx){
-  var g=JSON.parse(JSON.stringify(S.game)),i=S.myIdx;
+  var g=await freshGame(),i=S.myIdx;
   var pr=g.pendingReaction;
   if(!pr||pr.targetIdx!==i)return;
   // Find and discard the Boomerang card
@@ -469,7 +476,7 @@ window.useBoomerang=async function(newTargetIdx){
 
 // Player uses Decoy Stash — absorb the supply loss
 window.useDecoyStash=async function(){
-  var g=JSON.parse(JSON.stringify(S.game)),i=S.myIdx;
+  var g=await freshGame(),i=S.myIdx;
   var pr=g.pendingReaction;
   if(!pr||pr.targetIdx!==i)return;
   var dIdx=g.players[i].actions.findIndex(function(a){return a.name==="Decoy Stash";});
@@ -482,7 +489,7 @@ window.useDecoyStash=async function(){
 
 // Player accepts the hit — no reaction
 window.acceptHit=async function(){
-  var g=JSON.parse(JSON.stringify(S.game));
+  var g=await freshGame();
   var pr=g.pendingReaction;
   if(!pr||pr.targetIdx!==S.myIdx)return;
   g.log.push({msg:S.name+" accepted the hit.",type:"system"});
@@ -510,16 +517,14 @@ window.checkReactionTimeout=function(){
 };
 
 window.discardSabo=async function(si){
-  var g=JSON.parse(JSON.stringify(S.game)),i=S.myIdx;
+  var g=await freshGame(),i=S.myIdx;
   var d=g.players[i].supply.splice(si,1)[0];g.discardSupply.push(d);
   g.log.push({msg:S.name+" discarded "+d.name+" from sabotage.",type:"bad"});
   g.pendingSabotage=null;g.version=Date.now();await DB.set(S.code,g);set({game:g});
 };
 window.endTurn=async function(){
-  // Fetch fresh state to avoid stale turnsThisCycle from polling lag
-  var fresh=await DB.get(S.code);
-  var g=fresh?JSON.parse(JSON.stringify(fresh)):JSON.parse(JSON.stringify(S.game));
-  if(g.pendingReaction){set({game:g});return;} // Only block on active reaction timer
+  var g=await freshGame();
+  if(g.pendingReaction)return;
   var alive=g.players.filter(function(p){return!p.eliminated;});
   g.log.push({msg:S.name+" ended their turn.",type:"system"});g.turnsThisCycle++;g.actionsPlayed=0;g.turnPhase="draw";
   var nx=(g.currentPlayer+1)%g.players.length,lp=0;

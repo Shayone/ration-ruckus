@@ -6,1041 +6,249 @@
 <title>Ration Ruckus!</title>
 <style>
   :root {
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --surface-light: #242836;
-    --border: #2e3340;
-    --text: #e8e8e8;
-    --text-dim: #8890a0;
-    --green: #7CB342;
-    --green-dark: #558B2F;
-    --green-bg: #1a2618;
-    --amber: #F9A825;
-    --amber-dark: #E65100;
-    --amber-bg: #1e1a10;
-    --red: #EF5350;
-    --red-dark: #C62828;
-    --red-bg: #1e1214;
+    --bg: #0f1117; --surface: #1a1d27; --surface-light: #242836; --border: #2e3340;
+    --text: #e8e8e8; --text-dim: #8890a0;
+    --green: #7CB342; --green-bg: #1a2618;
+    --amber: #F9A825; --amber-bg: #1e1a10;
+    --red: #EF5350; --red-bg: #1e1214;
     --blue: #42A5F5;
   }
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    min-height: 100vh;
-    min-height: 100dvh;
-    overflow-x: hidden;
-  }
-
-  #app {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 16px;
-    min-height: 100vh;
-  }
-
-  .title {
-    text-align: center;
-    font-size: 28px;
-    font-weight: 800;
-    letter-spacing: 2px;
-    margin-bottom: 4px;
-  }
-  .title .g { color: var(--green); }
-  .title .r { color: var(--red); }
-
-  .subtitle {
-    text-align: center;
-    font-size: 13px;
-    color: var(--text-dim);
-    margin-bottom: 20px;
-  }
-
-  .panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px;
-    margin-bottom: 12px;
-  }
-
-  .btn {
-    border: none;
-    border-radius: 10px;
-    padding: 12px 24px;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    width: 100%;
-    transition: opacity 0.2s;
-  }
-  .btn:active { opacity: 0.8; }
-  .btn-amber { background: var(--amber); color: #000; }
-  .btn-green { background: var(--green); color: #000; }
-  .btn-dim { background: var(--surface-light); color: var(--text-dim); }
-  .btn-small {
-    padding: 8px 16px;
-    font-size: 13px;
-    width: auto;
-    border-radius: 8px;
-  }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-  .input {
-    background: var(--surface-light);
-    border: 2px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 16px;
-    font-size: 16px;
-    color: var(--text);
-    width: 100%;
-    outline: none;
-    text-align: center;
-  }
-  .input:focus { border-color: var(--amber); }
-  .input-code {
-    letter-spacing: 6px;
-    font-size: 20px;
-    text-transform: uppercase;
-  }
-
-  .badge {
-    display: inline-block;
-    border-radius: 6px;
-    padding: 2px 8px;
-    font-size: 11px;
-    font-weight: 700;
-  }
-
-  .form-stack {
-    max-width: 320px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .error { color: var(--red); font-size: 13px; text-align: center; }
-
-  /* Waiting Room */
-  .room-code {
-    font-size: 36px;
-    font-weight: 800;
-    letter-spacing: 6px;
-    color: var(--amber);
-    margin: 0 0 16px;
-  }
-
-  .player-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    background: var(--surface-light);
-    border-radius: 8px;
-    margin-bottom: 4px;
-    font-weight: 600;
-  }
-
-  /* Game Screen */
-  .header-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-  }
-
-  .turn-indicator {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--amber);
-  }
-
-  .players-bar {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-
-  .player-chip {
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 12px;
-    border: 1px solid var(--border);
-  }
-  .player-chip.active { background: var(--amber-bg); border-color: var(--amber); }
-  .player-chip.eliminated { background: var(--red-bg); border-color: var(--red-dark); opacity: 0.5; }
-
-  .section-label {
-    font-size: 12px;
-    font-weight: 700;
-    margin-bottom: 8px;
-  }
-
-  .cards-row {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .card {
-    border-radius: 12px;
-    padding: 10px 12px;
-    min-width: 110px;
-    max-width: 130px;
-    text-align: center;
-    font-size: 12px;
-    flex-shrink: 0;
-    cursor: default;
-    transition: transform 0.15s, box-shadow 0.15s;
-    border-width: 2px;
-    border-style: solid;
-  }
-  .card.playable {
-    cursor: pointer;
-  }
-  .card.playable:active {
-    transform: translateY(-3px);
-  }
-  .card-supply { background: var(--green-bg); border-color: var(--green); }
-  .card-action { background: var(--amber-bg); border-color: var(--amber); }
-  .card-event { background: #1E1E1E; border-color: #444; }
-  .card-reaction { border-style: dashed !important; }
-  .card .emoji { font-size: 28px; display: block; margin-bottom: 4px; }
-  .card .name { font-weight: 700; font-size: 11px; line-height: 1.2; }
-  .card .desc { font-size: 9px; color: var(--text-dim); margin-top: 3px; line-height: 1.3; }
-  .card.dim { opacity: 0.45; }
-
-  .target-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .controls {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-
-  .log-box {
-    max-height: 180px;
-    overflow-y: auto;
-  }
-  .log-entry {
-    font-size: 12px;
-    padding: 3px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .log-good { color: var(--green); }
-  .log-bad { color: var(--red); }
-  .log-event { color: var(--amber); }
-  .log-warning { color: var(--text-dim); }
-  .log-system { color: var(--text); }
-
-  .deck-counts {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    font-size: 11px;
-    color: var(--text-dim);
-    margin-top: 8px;
-  }
-
-  .winner-box {
-    text-align: center;
-    border: 2px solid var(--amber);
-  }
-
-  .sabotage-box {
-    border: 2px solid var(--red);
-  }
-  .sabotage-box .card-supply { border-color: var(--red); cursor: pointer; }
-
-  .target-box {
-    border: 2px solid var(--amber);
-  }
-
-  .eliminated-box {
-    text-align: center;
-    border: 2px solid var(--red);
-  }
-
-  .version-note {
-    font-size: 12px;
-    color: var(--text-dim);
-    text-align: center;
-    margin-top: 20px;
-    line-height: 1.6;
-  }
-
-  .hidden { display: none; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+  #app { max-width: 800px; margin: 0 auto; padding: 16px; }
+  .title { text-align:center; font-size:28px; font-weight:800; letter-spacing:2px; }
+  .g { color: var(--green); } .r { color: var(--red); }
+  .sub { text-align:center; font-size:13px; color:var(--text-dim); margin-bottom:20px; }
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:12px; }
+  .btn { border:none; border-radius:10px; padding:12px 24px; font-size:15px; font-weight:700; cursor:pointer; width:100%; display:block; margin-bottom:8px; }
+  .btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .btn-amber { background:var(--amber); color:#000; }
+  .btn-green { background:var(--green); color:#000; }
+  .btn-dim { background:var(--surface-light); color:var(--text-dim); }
+  .btn-small { padding:8px 16px; font-size:13px; width:auto; display:inline-block; margin:0 4px 4px 0; border:none; border-radius:8px; font-weight:700; cursor:pointer; }
+  .input { background:var(--surface-light); border:2px solid var(--border); border-radius:10px; padding:12px 16px; font-size:16px; color:var(--text); width:100%; outline:none; text-align:center; margin-bottom:8px; }
+  .input:focus { border-color:var(--amber); }
+  .input-code { letter-spacing:6px; font-size:20px; text-transform:uppercase; }
+  .form-stack { max-width:320px; margin:0 auto; }
+  .error { color:var(--red); font-size:13px; text-align:center; margin-top:8px; }
+  .room-code { font-size:36px; font-weight:800; letter-spacing:6px; color:var(--amber); text-align:center; margin-bottom:16px; }
+  .player-row { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--surface-light); border-radius:8px; margin-bottom:4px; font-weight:600; font-size:14px; }
+  .badge { display:inline-block; border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; }
+  .badge-amber { background:#F9A82522; color:var(--amber); }
+  .badge-green { background:#7CB34222; color:var(--green); }
+  .badge-red { background:#EF535022; color:var(--red); }
+  .badge-blue { background:#42A5F522; color:var(--blue); }
+  .header-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .turn-ind { font-size:13px; font-weight:700; color:var(--amber); }
+  .players-bar { display:flex; gap:6px; flex-wrap:wrap; }
+  .chip { padding:6px 12px; border-radius:8px; font-size:12px; border:1px solid var(--border); background:var(--surface-light); }
+  .chip-active { background:var(--amber-bg); border-color:var(--amber); }
+  .chip-dead { background:var(--red-bg); border-color:#C62828; opacity:0.5; }
+  .label { font-size:12px; font-weight:700; margin-bottom:8px; }
+  .cards-row { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
+  .card { border-radius:12px; padding:10px 12px; min-width:110px; max-width:130px; text-align:center; font-size:12px; flex-shrink:0; border:2px solid; }
+  .card-s { background:var(--green-bg); border-color:var(--green); }
+  .card-a { background:var(--amber-bg); border-color:var(--amber); }
+  .card-play { cursor:pointer; }
+  .card-dim { opacity:0.4; }
+  .card-dash { border-style:dashed !important; }
+  .emoji { font-size:28px; display:block; margin-bottom:4px; }
+  .cname { font-weight:700; font-size:11px; line-height:1.2; }
+  .cdesc { font-size:9px; color:var(--text-dim); margin-top:3px; line-height:1.3; }
+  .log-box { max-height:180px; overflow-y:auto; }
+  .log-entry { font-size:12px; padding:3px 0; border-bottom:1px solid var(--border); }
+  .log-good { color:var(--green); } .log-bad { color:var(--red); } .log-event { color:var(--amber); }
+  .log-warning { color:var(--text-dim); } .log-system { color:var(--text); }
+  .deck-counts { display:flex; gap:12px; justify-content:center; font-size:11px; color:var(--text-dim); margin-top:8px; }
+  .note { font-size:12px; color:var(--text-dim); text-align:center; margin-top:20px; line-height:1.6; }
 </style>
 </head>
 <body>
-<div id="app"></div>
-
+<div id="app">Loading...</div>
 <script>
-// ═══════════════════════════════════════════
-// RATION RUCKUS — Standalone Multiplayer
-// Uses localStorage + unique polling keys for sync
-// Hosted version: uses simple JSON relay server or
-// for MVP: Firebase Realtime DB free tier
-// ═══════════════════════════════════════════
+var FIREBASE_URL = localStorage.getItem("rr_firebase_url") || "";
+var useLocal = !FIREBASE_URL;
 
-// ── Firebase Config (Free Tier) ──
-// We use Firebase Realtime Database for free multiplayer sync
-// Shawon will set up a free Firebase project and paste the config here
-
-let FIREBASE_URL = ""; // Will be set during setup
-let useLocalFallback = true;
-
-// ── Simple storage abstraction ──
-const GameStorage = {
-  async get(key) {
-    if (!useLocalFallback && FIREBASE_URL) {
-      try {
-        const resp = await fetch(`${FIREBASE_URL}/rooms/${key}.json`);
-        if (!resp.ok) return null;
-        const data = await resp.json();
-        return data;
-      } catch(e) { return null; }
+var DB = {
+  get: async function(k) {
+    if (!useLocal && FIREBASE_URL) {
+      try { var r = await fetch(FIREBASE_URL+"/rooms/"+k+".json"); if(!r.ok) return null; return await r.json(); } catch(e) { return null; }
     }
-    const val = localStorage.getItem(`rr_${key}`);
-    return val ? JSON.parse(val) : null;
+    var v = localStorage.getItem("rr_"+k); return v ? JSON.parse(v) : null;
   },
-  async set(key, value) {
-    if (!useLocalFallback && FIREBASE_URL) {
-      try {
-        await fetch(`${FIREBASE_URL}/rooms/${key}.json`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(value),
-        });
-        return true;
-      } catch(e) { return false; }
+  set: async function(k, v) {
+    if (!useLocal && FIREBASE_URL) {
+      try { await fetch(FIREBASE_URL+"/rooms/"+k+".json", {method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(v)}); } catch(e) {}
     }
-    localStorage.setItem(`rr_${key}`, JSON.stringify(value));
-    return true;
+    localStorage.setItem("rr_"+k, JSON.stringify(v));
   }
 };
 
-// ── Card Definitions ──
-const SUPPLY_TYPES = [
-  { name: "Snack Stash", emoji: "🍕", count: 4, value: 1 },
-  { name: "Cozy Blanket", emoji: "🛏️", count: 4, value: 1 },
-  { name: "Duct Tape", emoji: "🩹", count: 4, value: 1 },
-  { name: "Battery Pack", emoji: "🔋", count: 4, value: 1 },
-  { name: "First Aid Kit", emoji: "🩺", count: 4, value: 1 },
-  { name: "Bottled Water", emoji: "🫗", count: 4, value: 1 },
-  { name: "Canned Goods", emoji: "🥫", count: 4, value: 1 },
-  { name: "Jackpot Crate", emoji: "📦", count: 2, value: 2 },
-];
+var SUPPLY=[{name:"Snack Stash",emoji:"\u{1F355}",count:4,value:1},{name:"Cozy Blanket",emoji:"\u{1F6CF}",count:4,value:1},{name:"Duct Tape",emoji:"\u{1FA79}",count:4,value:1},{name:"Battery Pack",emoji:"\u{1F50B}",count:4,value:1},{name:"First Aid Kit",emoji:"\u{1FA7A}",count:4,value:1},{name:"Bottled Water",emoji:"\u{1FAD7}",count:4,value:1},{name:"Canned Goods",emoji:"\u{1F96B}",count:4,value:1},{name:"Jackpot Crate",emoji:"\u{1F4E6}",count:2,value:2}];
+var ACTIONS=[{name:"Scrounge",emoji:"\u{1F50D}",count:10,type:"core",target:"self",desc:"Draw 1 Supply card."},{name:"Hustle",emoji:"\u{1F4A8}",count:6,type:"core",target:"self",desc:"Draw 2 Action cards."},{name:"Sabotage",emoji:"\u{1F4A3}",count:5,type:"offensive",target:"other",desc:"Target discards 1 Supply."},{name:"Pilfer",emoji:"\u{1F99D}",count:4,type:"offensive",target:"other",desc:"Steal 1 random Supply."},{name:"Pickpocket",emoji:"\u{1FAF3}",count:4,type:"offensive",target:"other",desc:"Steal 1 random Action."},{name:"Slow Down",emoji:"\u{1F40C}",count:6,type:"offensive",target:"other",desc:"Target plays max 1 Action next turn."},{name:"Boomerang",emoji:"\u{1FA83}",count:6,type:"reaction",target:"react",desc:"Redirect a targeted card. (Step 2)"},{name:"Decoy Stash",emoji:"\u{1FA86}",count:5,type:"reaction",target:"react",desc:"Absorb supply loss. (Step 2)"},{name:"Shelter",emoji:"\u{1F6D6}",count:6,type:"reaction",target:"self",desc:"Block next Event. (Step 2)"},{name:"Last Resort",emoji:"\u{1FA82}",count:2,type:"reaction",target:"react",desc:"Avoid elimination. (Step 2)"},{name:"Foresight",emoji:"\u{1F441}",count:3,type:"special",target:"self",desc:"Peek top 3 Events. (Step 3)"},{name:"Collateral Damage",emoji:"\u{1F9E8}",count:2,type:"special",target:"multi",desc:"You + 2 others lose 1 Supply. (Step 3)"},{name:"Recurring Nightmare",emoji:"\u{1F608}",count:2,type:"special",target:"others",desc:"Replay discarded Event. (Step 3)"},{name:"Scavenger",emoji:"\u{1FABA}",count:2,type:"special",target:"self",desc:"Draw per eliminated players. (Step 3)"},{name:"Coin Toss",emoji:"\u{1FA99}",count:3,type:"special",target:"other",desc:"Flip coin for Supply. (Step 3)"}];
+var EVENTS=[{name:"Bad Day",emoji:"\u{1F629}",count:7,desc:"Each player loses 1 Supply.",effect:-1},{name:"Catastrophe",emoji:"\u{1F30B}",count:2,desc:"Each player loses 2 Supply.",effect:-2},{name:"Lucky Break",emoji:"\u{1F389}",count:4,desc:"Each player gains 1 Supply.",effect:1},{name:"Spin the Bottle",emoji:"\u{1FA99}",count:2,desc:"Flip coins, lose per Heads (max 3).",effect:"spin"},{name:"Helping Hand",emoji:"\u{1F91D}",count:2,desc:"Lowest Supply gains 1 Supply + 1 Action.",effect:"mercy"},{name:"Jealousy Tax",emoji:"\u{1F624}",count:2,desc:"Highest Supply loses 2 Supply.",effect:"greed"},{name:"Meltdown",emoji:"\u{1F4A5}",count:1,desc:"All lose until someone hits 0.",effect:"meltdown"}];
 
-const ACTION_TYPES = [
-  { name: "Scrounge", emoji: "🔍", count: 10, type: "core", target: "self", desc: "Draw 1 Supply card." },
-  { name: "Hustle", emoji: "💨", count: 6, type: "core", target: "self", desc: "Draw 2 Action cards." },
-  { name: "Sabotage", emoji: "💣", count: 5, type: "offensive", target: "other", desc: "Target discards 1 Supply." },
-  { name: "Pilfer", emoji: "🦝", count: 4, type: "offensive", target: "other", desc: "Steal 1 random Supply." },
-  { name: "Pickpocket", emoji: "🫳", count: 4, type: "offensive", target: "other", desc: "Steal 1 random Action." },
-  { name: "Slow Down", emoji: "🐌", count: 6, type: "offensive", target: "other", desc: "Target plays 1 Action max next turn." },
-  { name: "Boomerang", emoji: "🪃", count: 6, type: "reaction", target: "react", desc: "Redirect a targeted card. (Step 2)" },
-  { name: "Decoy Stash", emoji: "🪆", count: 5, type: "reaction", target: "react", desc: "Absorb supply loss. (Step 2)" },
-  { name: "Shelter", emoji: "🛖", count: 6, type: "reaction", target: "self", desc: "Block next Event. (Step 2)" },
-  { name: "Last Resort", emoji: "🪂", count: 2, type: "reaction", target: "react", desc: "Avoid elimination. (Step 2)" },
-  { name: "Foresight", emoji: "👁️", count: 3, type: "special", target: "self", desc: "Peek top 3 Events. (Step 3)" },
-  { name: "Collateral Damage", emoji: "🧨", count: 2, type: "special", target: "multi", desc: "You + 2 others lose 1 Supply. (Step 3)" },
-  { name: "Recurring Nightmare", emoji: "😈", count: 2, type: "special", target: "others", desc: "Replay discarded Event. (Step 3)" },
-  { name: "Scavenger", emoji: "🪺", count: 2, type: "special", target: "self", desc: "Draw per eliminated players. (Step 3)" },
-  { name: "Coin Toss", emoji: "🪙", count: 3, type: "special", target: "other", desc: "Flip coin for Supply. (Step 3)" },
-];
+var CORE=["Scrounge","Hustle","Sabotage","Pilfer","Pickpocket","Slow Down"];
 
-const EVENT_TYPES = [
-  { name: "Bad Day", emoji: "😩", count: 7, desc: "Each player loses 1 Supply.", effect: -1 },
-  { name: "Catastrophe", emoji: "🌋", count: 2, desc: "Each player loses 2 Supply.", effect: -2 },
-  { name: "Lucky Break", emoji: "🎉", count: 4, desc: "Each player gains 1 Supply.", effect: 1 },
-  { name: "Spin the Bottle", emoji: "🪙", count: 2, desc: "Flip coins — lose per Heads (max 3).", effect: "spin" },
-  { name: "Helping Hand", emoji: "🤝", count: 2, desc: "Lowest Supply gains 1 Supply + 1 Action.", effect: "mercy" },
-  { name: "Jealousy Tax", emoji: "😤", count: 2, desc: "Highest Supply loses 2 Supply.", effect: "greed" },
-  { name: "Meltdown", emoji: "💥", count: 1, desc: "All lose Supply until someone hits 0.", effect: "meltdown" },
-];
+function buildDeck(types,dt){var c=[],id=0;types.forEach(function(t){for(var i=0;i<t.count;i++)c.push(Object.assign({},t,{id:dt+"_"+id++,deck:dt}));});return c;}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function genCode(){var c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",s="";for(var i=0;i<5;i++)s+=c[Math.floor(Math.random()*c.length)];return s;}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 
-// ── Utilities ──
-function buildDeck(types, deckType) {
-  const cards = [];
-  let id = 0;
-  types.forEach(t => {
-    for (let i = 0; i < t.count; i++) {
-      cards.push({ ...t, id: `${deckType}_${id++}`, deck: deckType });
-    }
-  });
-  return cards;
+function initGame(players){
+  var sd=shuffle(buildDeck(SUPPLY,"s")),ad=shuffle(buildDeck(ACTIONS,"a")),ed=shuffle(buildDeck(EVENTS,"e"));
+  var n=players.length,sc=n<=4?3:2,ac=n<=4?4:5;
+  var hands=players.map(function(p){return Object.assign({},p,{supply:sd.splice(0,sc),actions:ad.splice(0,ac),eliminated:false,slowedDown:false});});
+  return{status:"playing",players:hands,supplyDeck:sd,actionDeck:ad,eventDeck:ed,discardSupply:[],discardAction:[],discardEvent:[],currentPlayer:0,cycle:1,turnPhase:"draw",actionsPlayed:0,maxActions:3,log:[{msg:"Game started! Let the ruckus begin!",type:"system"}],firstCycle:true,turnsThisCycle:0,pendingSabotage:null,version:Date.now()};
 }
 
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
+var S={screen:"menu",name:"",code:"",myIdx:-1,game:null,err:"",poll:null,pTarget:null};
+var $=document.getElementById("app");
+
+function set(u){Object.assign(S,u);render();}
+
+function poll(code,name){
+  if(S.poll)clearInterval(S.poll);
+  S.poll=setInterval(async function(){
+    var d=await DB.get(code);if(!d)return;
+    if(S.screen==="lobby"&&d.status==="playing"){clearInterval(S.poll);set({screen:"game",myIdx:d.players.findIndex(function(p){return p.name===name;}),game:d});poll(code,name);}
+    else if(S.screen==="game"&&d.version!==S.game.version){set({game:d});}
+    else if(S.screen==="lobby"){set({game:d});}
+  },1500);
 }
 
-function genCode() {
-  const c = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-  for (let i = 0; i < 5; i++) code += c[Math.floor(Math.random() * c.length)];
-  return code;
-}
-
-function initGame(players) {
-  const supplyDeck = shuffle(buildDeck(SUPPLY_TYPES, "supply"));
-  const actionDeck = shuffle(buildDeck(ACTION_TYPES, "action"));
-  const eventDeck = shuffle(buildDeck(EVENT_TYPES, "event"));
-  const n = players.length;
-  const sc = n <= 4 ? 3 : 2;
-  const ac = n <= 4 ? 4 : 5;
-  const hands = players.map((p, i) => ({
-    ...p,
-    supply: supplyDeck.splice(0, sc),
-    actions: actionDeck.splice(0, ac),
-    eliminated: false,
-    slowedDown: false,
-  }));
-  return {
-    status: "playing",
-    players: hands,
-    supplyDeck, actionDeck, eventDeck,
-    discardSupply: [], discardAction: [], discardEvent: [],
-    currentPlayer: 0,
-    cycle: 1,
-    turnPhase: "draw",
-    actionsPlayed: 0,
-    maxActions: 3,
-    log: [{ msg: "Game started! Let the ruckus begin!", type: "system" }],
-    firstCycle: true,
-    turnsThisCycle: 0,
-    pendingSabotage: null,
-    version: Date.now(),
-  };
-}
-
-const FUNCTIONAL_CARDS = ["Scrounge", "Hustle", "Sabotage", "Pilfer", "Pickpocket", "Slow Down"];
-
-// ═══════════════════════════
-// APP STATE & RENDERING
-// ═══════════════════════════
-const app = document.getElementById("app");
-let state = {
-  screen: "menu", // menu | create | join | lobby | game
-  playerName: "",
-  roomCode: "",
-  myIdx: -1,
-  game: null,
-  error: "",
-  pollTimer: null,
-  pendingTarget: null,
+window.createRoom=async function(){
+  var n=S.name.trim();if(!n){set({err:"Enter your name!"});return;}
+  var c=genCode(),lobby={status:"lobby",host:n,players:[{name:n,id:0}],created:Date.now(),version:Date.now()};
+  await DB.set(c,lobby);set({screen:"lobby",code:c,game:lobby,err:""});poll(c,n);
+};
+window.joinRoom=async function(){
+  var n=S.name.trim(),c=S.code.trim().toUpperCase();
+  if(!n){set({err:"Enter your name!"});return;}if(c.length<5){set({err:"Enter valid code!"});return;}
+  var d=await DB.get(c);if(!d){set({err:"Room not found!"});return;}
+  if(d.status!=="lobby"){set({err:"Game already started!"});return;}if(d.players.length>=8){set({err:"Room full!"});return;}
+  if(d.players.find(function(p){return p.name===n;})){set({err:"Name taken!"});return;}
+  d.players.push({name:n,id:d.players.length});d.version=Date.now();
+  await DB.set(c,d);set({screen:"lobby",code:c,game:d,err:""});poll(c,n);
+};
+window.startGameBtn=async function(){
+  if(S.game.players.length<2){set({err:"Need 2+ players!"});return;}
+  var g=initGame(S.game.players);await DB.set(S.code,g);
+  if(S.poll)clearInterval(S.poll);
+  set({screen:"game",myIdx:S.game.players.findIndex(function(p){return p.name===S.name.trim();}),game:g,err:""});
+  poll(S.code,S.name.trim());
 };
 
-function setState(updates) {
-  Object.assign(state, updates);
-  render();
+window.drawAction=async function(){
+  var g=JSON.parse(JSON.stringify(S.game)),i=S.myIdx;
+  if(g.actionDeck.length>0){g.players[i].actions.push(g.actionDeck.shift());g.log.push({msg:S.name+" drew an Action card.",type:"system"});}
+  else{g.log.push({msg:"Action deck empty!",type:"warning"});}
+  g.turnPhase="play";g.actionsPlayed=0;g.maxActions=g.players[i].slowedDown?1:3;g.players[i].slowedDown=false;
+  g.version=Date.now();await DB.set(S.code,g);set({game:g});
+};
+
+window.playCard=function(ci){
+  var me=S.game.players[S.myIdx],card=me.actions[ci];
+  if(!card||CORE.indexOf(card.name)<0||S.game.actionsPlayed>=S.game.maxActions)return;
+  if(card.target==="other"){set({pTarget:{ci:ci,card:card}});return;}
+  if(card.name==="Scrounge")window.execScrounge(ci);
+  else if(card.name==="Hustle")window.execHustle(ci);
+};
+
+window.execScrounge=async function(ci){
+  var g=JSON.parse(JSON.stringify(S.game)),i=S.myIdx;
+  g.discardAction.push(g.players[i].actions.splice(ci,1)[0]);
+  if(g.supplyDeck.length>0){var d=g.supplyDeck.shift();g.players[i].supply.push(d);g.log.push({msg:S.name+" scrounged "+d.name+"!",type:"good"});}
+  else{g.log.push({msg:"Supply deck empty!",type:"warning"});}
+  g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
+};
+window.execHustle=async function(ci){
+  var g=JSON.parse(JSON.stringify(S.game)),i=S.myIdx;
+  g.discardAction.push(g.players[i].actions.splice(ci,1)[0]);
+  var d=0;for(var j=0;j<2;j++)if(g.actionDeck.length>0){g.players[i].actions.push(g.actionDeck.shift());d++;}
+  g.log.push({msg:S.name+" hustled and drew "+d+" Action card"+(d!==1?"s":"")+"!",type:"good"});
+  g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
+};
+window.execTargeted=async function(ti){
+  var pt=S.pTarget,g=JSON.parse(JSON.stringify(S.game)),i=S.myIdx;
+  g.discardAction.push(g.players[i].actions.splice(pt.ci,1)[0]);
+  var tn=g.players[ti].name,card=pt.card;
+  if(card.name==="Sabotage"){if(g.players[ti].supply.length>0){g.pendingSabotage={targetIdx:ti,by:S.name};g.log.push({msg:S.name+" sabotaged "+tn+"!",type:"bad"});}else{g.log.push({msg:tn+" has no supplies!",type:"warning"});}}
+  else if(card.name==="Pilfer"){if(g.players[ti].supply.length>0){var ri=Math.floor(Math.random()*g.players[ti].supply.length),st=g.players[ti].supply.splice(ri,1)[0];g.players[i].supply.push(st);g.log.push({msg:S.name+" pilfered "+st.name+" from "+tn+"!",type:"bad"});}else{g.log.push({msg:tn+" has nothing!",type:"warning"});}}
+  else if(card.name==="Pickpocket"){if(g.players[ti].actions.length>0){var ri2=Math.floor(Math.random()*g.players[ti].actions.length),st2=g.players[ti].actions.splice(ri2,1)[0];g.players[i].actions.push(st2);g.log.push({msg:S.name+" pickpocketed from "+tn+"!",type:"bad"});}else{g.log.push({msg:tn+" has no actions!",type:"warning"});}}
+  else if(card.name==="Slow Down"){g.players[ti].slowedDown=true;g.log.push({msg:S.name+" slowed down "+tn+"!",type:"bad"});}
+  g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
+};
+window.discardSabo=async function(si){
+  var g=JSON.parse(JSON.stringify(S.game)),i=S.myIdx;
+  var d=g.players[i].supply.splice(si,1)[0];g.discardSupply.push(d);
+  g.log.push({msg:S.name+" discarded "+d.name+" from sabotage.",type:"bad"});
+  g.pendingSabotage=null;g.version=Date.now();await DB.set(S.code,g);set({game:g});
+};
+window.endTurn=async function(){
+  var g=JSON.parse(JSON.stringify(S.game)),alive=g.players.filter(function(p){return!p.eliminated;});
+  g.log.push({msg:S.name+" ended their turn.",type:"system"});g.turnsThisCycle++;g.actionsPlayed=0;g.turnPhase="draw";
+  var nx=(g.currentPlayer+1)%g.players.length,lp=0;
+  while(g.players[nx].eliminated&&lp<g.players.length){nx=(nx+1)%g.players.length;lp++;}
+  g.currentPlayer=nx;
+  if(g.turnsThisCycle>=alive.length){g.turnsThisCycle=0;g.cycle++;g.firstCycle=false;g.log.push({msg:"=== Cycle "+g.cycle+" begins! ===",type:"event"});g.log.push({msg:"(Events coming in Step 4)",type:"warning"});}
+  g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
+};
+window.doCreate=function(){S.name=document.getElementById("ni").value;createRoom();};
+window.doJoin=function(){S.name=document.getElementById("ni").value;S.code=document.getElementById("ci").value;joinRoom();};
+window.saveFirebase=function(){var v=document.getElementById("fbi").value.trim();if(v&&v.indexOf("https://")===0){FIREBASE_URL=v;localStorage.setItem("rr_firebase_url",v);useLocal=false;set({screen:"menu"});}else{alert("Enter valid URL starting with https://");}};
+
+function render(){
+  if(S.screen==="menu")renderMenu();
+  else if(S.screen==="create"||S.screen==="join")renderForm();
+  else if(S.screen==="lobby")renderLobby();
+  else if(S.screen==="game")renderGame();
+  else if(S.screen==="setup")renderSetup();
 }
 
-function startPolling(code, name) {
-  if (state.pollTimer) clearInterval(state.pollTimer);
-  const timer = setInterval(async () => {
-    const data = await GameStorage.get(code);
-    if (!data) return;
-    if (state.screen === "lobby") {
-      setState({ game: data });
-      if (data.status === "playing") {
-        clearInterval(timer);
-        const idx = data.players.findIndex(p => p.name === name);
-        setState({ screen: "game", myIdx: idx, game: data });
-      }
-    } else if (state.screen === "game") {
-      if (data.version !== state.game?.version) {
-        setState({ game: data });
-      }
-    }
-  }, 1500);
-  setState({ pollTimer: timer });
+function renderMenu(){
+  $.innerHTML='<div style="margin-top:60px"><div class="title" style="font-size:36px"><span class="g">Ration</span> <span class="r">Ruckus!</span></div><p class="sub" style="margin-bottom:40px">Hoard. Survive. Outlast.</p><div class="form-stack"><button class="btn btn-amber" onclick="set({screen:\'create\'})">Create Game</button><button class="btn btn-green" onclick="set({screen:\'join\'})">Join Game</button><button class="btn btn-dim" style="font-size:12px" onclick="set({screen:\'setup\'})">'+(FIREBASE_URL?"&#10004; Firebase Connected":"&#9881; Setup Firebase (for online play)")+'</button>'+(FIREBASE_URL?'':'<p class="note">Without Firebase, multiplayer only works in 2 browser tabs on same device.</p>')+'<p class="note">Step 1 Build &mdash; Core actions playable.<br>Reactions, specials &amp; events coming soon.</p></div></div>';
 }
 
-// ═══════════════════════════
-// GAME ACTIONS
-// ═══════════════════════════
-async function drawAction() {
-  const g = JSON.parse(JSON.stringify(state.game));
-  const idx = state.myIdx;
-  if (g.actionDeck.length > 0) {
-    g.players[idx].actions.push(g.actionDeck.shift());
-    g.log.push({ msg: `${state.playerName} drew an Action card.`, type: "system" });
-  } else {
-    g.log.push({ msg: `Action deck empty! ${state.playerName} couldn't draw.`, type: "warning" });
-  }
-  g.turnPhase = "play";
-  g.actionsPlayed = 0;
-  g.maxActions = g.players[idx].slowedDown ? 1 : 3;
-  g.players[idx].slowedDown = false;
-  g.version = Date.now();
-  await GameStorage.set(state.roomCode, g);
-  setState({ game: g });
+function renderForm(){
+  var cr=S.screen==="create";
+  $.innerHTML='<div class="title"><span class="g">Ration</span> <span class="r">Ruckus!</span></div><p class="sub">'+(cr?"Create a Game":"Join a Game")+'</p><div class="form-stack"><input class="input" id="ni" placeholder="Your name" maxlength="16" value="'+esc(S.name)+'">'+(cr?'':'<input class="input input-code" id="ci" placeholder="ROOM CODE" maxlength="5" value="'+esc(S.code)+'">')+'<button class="btn '+(cr?"btn-amber":"btn-green")+'" onclick="'+(cr?"doCreate()":"doJoin()")+'">'+(cr?"Create Room":"Join Room")+'</button><button class="btn btn-dim" onclick="set({screen:\'menu\',err:\'\'})">Back</button>'+(S.err?'<p class="error">'+esc(S.err)+'</p>':'')+'</div>';
 }
 
-function playCard(cardIdx) {
-  const g = state.game;
-  const me = g.players[state.myIdx];
-  const card = me.actions[cardIdx];
-  if (!card || !FUNCTIONAL_CARDS.includes(card.name)) return;
-  if (g.actionsPlayed >= g.maxActions) return;
-
-  if (card.target === "other") {
-    setState({ pendingTarget: { cardIdx, card } });
-    return;
-  }
-  if (card.name === "Scrounge") execScrounge(cardIdx);
-  else if (card.name === "Hustle") execHustle(cardIdx);
+function renderLobby(){
+  var g=S.game,isHost=g.players[0].name===S.name.trim();
+  var ph=g.players.map(function(p,i){return'<div class="player-row"><span>'+esc(p.name)+'</span>'+(i===0?'<span class="badge badge-amber">HOST</span>':'')+(p.name===S.name.trim()&&i!==0?'<span class="badge badge-green">YOU</span>':'')+'</div>';}).join("");
+  $.innerHTML='<div class="title"><span class="g">Ration</span> <span class="r">Ruckus!</span></div><p class="sub">Waiting Room</p><div class="panel" style="max-width:360px;margin:0 auto;text-align:center"><p style="font-size:12px;color:var(--text-dim);margin-bottom:6px">ROOM CODE</p><div class="room-code">'+S.code+'</div><p style="font-size:13px;color:var(--text-dim);margin-bottom:16px">Share this code with other players</p><div style="text-align:left;margin-bottom:16px"><p style="font-size:12px;color:var(--text-dim);margin-bottom:8px">PLAYERS ('+g.players.length+'/8)</p>'+ph+'</div>'+(isHost?'<button class="btn btn-green" onclick="startGameBtn()"'+(g.players.length<2?' disabled':'')+'>'+( g.players.length<2?'Need 2+ Players':'Start Game ('+g.players.length+' players)')+'</button>':'<p style="font-size:13px;color:var(--text-dim)">Waiting for host to start...</p>')+(S.err?'<p class="error">'+esc(S.err)+'</p>':'')+'</div>';
 }
 
-async function execScrounge(cardIdx) {
-  const g = JSON.parse(JSON.stringify(state.game));
-  const idx = state.myIdx;
-  const card = g.players[idx].actions.splice(cardIdx, 1)[0];
-  g.discardAction.push(card);
-  if (g.supplyDeck.length > 0) {
-    const drawn = g.supplyDeck.shift();
-    g.players[idx].supply.push(drawn);
-    g.log.push({ msg: `${state.playerName} scrounged and found ${drawn.name}!`, type: "good" });
-  } else {
-    g.log.push({ msg: `${state.playerName} scrounged but supply deck is empty!`, type: "warning" });
-  }
-  g.actionsPlayed++;
-  g.version = Date.now();
-  await GameStorage.set(state.roomCode, g);
-  setState({ game: g, pendingTarget: null });
+function renderGame(){
+  var g=S.game;if(!g||!g.players){$.innerHTML="Loading...";return;}
+  var me=g.players[S.myIdx],myTurn=g.currentPlayer===S.myIdx&&!me.eliminated;
+  var alive=g.players.filter(function(p){return!p.eliminated;}),winner=alive.length===1?alive[0]:null;
+  var saboMe=g.pendingSabotage&&g.pendingSabotage.targetIdx===S.myIdx;
+  var h='';
+  h+='<div class="header-bar"><div><div style="font-size:20px;font-weight:800"><span class="g">Ration</span> <span class="r">Ruckus!</span></div><div style="font-size:11px;color:var(--text-dim)">Room: '+S.code+' &bull; Cycle '+g.cycle+'</div></div><div style="text-align:right"><div class="turn-ind">'+(myTurn?"YOUR TURN":esc(g.players[g.currentPlayer].name)+"'s turn")+'</div><div style="font-size:11px;color:var(--text-dim)">'+(myTurn&&g.turnPhase==="draw"?"Draw an Action card":myTurn&&g.turnPhase==="play"?"Actions: "+g.actionsPlayed+"/"+g.maxActions:"Waiting...")+'</div></div></div>';
+  if(winner)h+='<div class="panel" style="text-align:center;border:2px solid var(--amber)"><div style="font-size:40px;margin-bottom:8px">&#127942;</div><div style="font-size:22px;font-weight:800;color:var(--amber)">'+esc(winner.name)+' Wins!</div><p style="color:var(--text-dim);font-size:13px">Last critter standing!</p></div>';
+  if(saboMe){var sc=me.supply.map(function(s,i){return'<div class="card card-s card-play" onclick="discardSabo('+i+')"><span class="emoji">'+s.emoji+'</span><span class="cname">'+esc(s.name)+'</span></div>';}).join("");h+='<div class="panel" style="border:2px solid var(--red)"><p style="font-size:14px;font-weight:700;color:var(--red);margin-bottom:8px">&#128163; Sabotaged by '+esc(g.pendingSabotage.by)+'! Choose a Supply to discard:</p><div class="cards-row">'+sc+'</div></div>';}
+  var chips=g.players.map(function(p,i){var cls=p.eliminated?"chip-dead":i===g.currentPlayer?"chip-active":"";return'<div class="chip '+cls+'"><span style="font-weight:700">'+esc(p.name)+'</span>'+(i===S.myIdx?'<span style="color:var(--blue)"> (you)</span>':'')+'<span style="color:var(--green);margin-left:6px">'+(p.eliminated?'&#9760;':'&#128230;'+p.supply.length)+'</span>'+(p.eliminated?'':'<span style="color:var(--amber);margin-left:4px">&#127183;'+p.actions.length+'</span>')+(p.slowedDown&&!p.eliminated?'<span style="margin-left:4px">&#128012;</span>':'')+'</div>';}).join("");
+  h+='<div class="panel"><div class="label" style="color:var(--text-dim)">PLAYERS</div><div class="players-bar">'+chips+'</div></div>';
+  if(S.pTarget){var tb=g.players.map(function(p,i){if(i===S.myIdx||p.eliminated)return'';return'<button class="btn-small" style="background:var(--amber);color:#000" onclick="execTargeted('+i+')">'+esc(p.name)+' (&#128230;'+p.supply.length+')</button>';}).join("");h+='<div class="panel" style="border:2px solid var(--amber)"><p style="font-size:14px;font-weight:700;color:var(--amber);margin-bottom:8px">'+S.pTarget.card.emoji+' '+esc(S.pTarget.card.name)+' &mdash; Choose a target:</p><div>'+tb+'<button class="btn-small" style="background:var(--surface-light);color:var(--text-dim)" onclick="set({pTarget:null})">Cancel</button></div></div>';}
+  if(me&&!me.eliminated){var scs=me.supply.length===0?'<p style="font-size:12px;color:var(--text-dim)">No supplies! You are in danger!</p>':me.supply.map(function(s){return'<div class="card card-s"><span class="emoji">'+s.emoji+'</span><span class="cname">'+esc(s.name)+'</span>'+(s.value===2?'<span class="badge badge-amber" style="margin-top:3px;font-size:9px">x2</span>':'')+'</div>';}).join("");h+='<div class="panel"><div class="label" style="color:var(--green)">YOUR SUPPLIES ('+me.supply.length+')</div><div class="cards-row">'+scs+'</div></div>';}
+  if(me&&!me.eliminated){var canPlay=myTurn&&g.turnPhase==="play"&&g.actionsPlayed<g.maxActions;var acs=me.actions.length===0?'<p style="font-size:12px;color:var(--text-dim)">No actions!</p>':me.actions.map(function(a,i){var ok=canPlay&&CORE.indexOf(a.name)>=0;var dash=a.type==="reaction"?"card-dash":"";return'<div class="card card-a '+dash+' '+(ok?"card-play":"card-dim")+'" '+(ok?'onclick="playCard('+i+')"':'')+'><span class="emoji">'+a.emoji+'</span><span class="cname">'+esc(a.name)+'</span><span class="cdesc">'+esc(a.desc)+'</span>'+(a.type==="reaction"?'<span class="badge badge-red" style="margin-top:3px;font-size:8px">REACT</span>':'')+(a.type==="special"?'<span class="badge badge-blue" style="margin-top:3px;font-size:8px">SPECIAL</span>':'')+'</div>';}).join("");h+='<div class="panel"><div class="label" style="color:var(--amber)">YOUR ACTIONS ('+me.actions.length+')'+(canPlay?' <span style="color:var(--text-dim);font-weight:400">&mdash; tap to play ('+g.actionsPlayed+'/'+g.maxActions+')</span>':'')+'</div><div class="cards-row">'+acs+'</div></div>';}
+  if(myTurn&&!winner&&me&&!me.eliminated){if(g.turnPhase==="draw")h+='<button class="btn btn-amber" onclick="drawAction()">&#127183; Draw Action Card</button>';else h+='<button class="btn btn-green" onclick="endTurn()">&#10003; End Turn '+(g.actionsPlayed>0?'('+g.actionsPlayed+' played)':'(pass)')+'</button>';}
+  if(me&&me.eliminated)h+='<div class="panel" style="text-align:center;border:2px solid var(--red)"><div style="font-size:30px;margin-bottom:6px">&#9760;</div><p style="font-weight:700;color:var(--red)">You have been eliminated!</p><p style="font-size:12px;color:var(--text-dim)">Spectating...</p></div>';
+  var logs=(g.log||[]).slice(-20).map(function(e){return'<div class="log-entry log-'+e.type+'">'+esc(e.msg)+'</div>';}).join("");
+  h+='<div class="panel"><div class="label" style="color:var(--text-dim)">GAME LOG</div><div class="log-box" id="lb">'+logs+'</div></div>';
+  h+='<div class="deck-counts"><span>&#128230; Supply: '+(g.supplyDeck?g.supplyDeck.length:0)+'</span><span>&#127183; Action: '+(g.actionDeck?g.actionDeck.length:0)+'</span><span>&#9889; Event: '+(g.eventDeck?g.eventDeck.length:0)+'</span></div>';
+  $.innerHTML=h;
+  var lb=document.getElementById("lb");if(lb)lb.scrollTop=lb.scrollHeight;
 }
 
-async function execHustle(cardIdx) {
-  const g = JSON.parse(JSON.stringify(state.game));
-  const idx = state.myIdx;
-  const card = g.players[idx].actions.splice(cardIdx, 1)[0];
-  g.discardAction.push(card);
-  let drawn = 0;
-  for (let i = 0; i < 2; i++) {
-    if (g.actionDeck.length > 0) { g.players[idx].actions.push(g.actionDeck.shift()); drawn++; }
-  }
-  g.log.push({ msg: `${state.playerName} hustled and drew ${drawn} Action card${drawn !== 1 ? "s" : ""}!`, type: "good" });
-  g.actionsPlayed++;
-  g.version = Date.now();
-  await GameStorage.set(state.roomCode, g);
-  setState({ game: g, pendingTarget: null });
+function renderSetup(){
+  $.innerHTML='<div class="title"><span class="g">Ration</span> <span class="r">Ruckus!</span></div><p class="sub">Firebase Setup (Free)</p><div class="panel" style="max-width:500px;margin:0 auto"><p style="font-size:14px;font-weight:700;margin-bottom:12px">Quick Setup (5 minutes):</p><p style="font-size:13px;color:var(--text-dim);margin-bottom:6px;line-height:1.6">1. Go to <b>console.firebase.google.com</b></p><p style="font-size:13px;color:var(--text-dim);margin-bottom:6px;line-height:1.6">2. Create a project, name it anything</p><p style="font-size:13px;color:var(--text-dim);margin-bottom:6px;line-height:1.6">3. Click <b>Databases &amp; Storage</b> then <b>Realtime Database</b></p><p style="font-size:13px;color:var(--text-dim);margin-bottom:6px;line-height:1.6">4. Click <b>Create Database</b>, any location, <b>Start in test mode</b></p><p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;line-height:1.6">5. Copy your database URL (starts with https://)</p><input class="input" id="fbi" placeholder="Paste Firebase URL here" style="text-align:left;letter-spacing:0;font-size:14px" value="'+esc(FIREBASE_URL)+'"><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-green" onclick="saveFirebase()">Save &amp; Connect</button><button class="btn btn-dim" onclick="set({screen:\'menu\'})">Cancel</button></div>'+(FIREBASE_URL?'<p style="font-size:11px;color:var(--green);margin-top:8px">Connected: '+esc(FIREBASE_URL)+'</p>':'')+'</div>';
 }
 
-async function execTargeted(targetIdx) {
-  const { cardIdx, card } = state.pendingTarget;
-  const g = JSON.parse(JSON.stringify(state.game));
-  const idx = state.myIdx;
-  const played = g.players[idx].actions.splice(cardIdx, 1)[0];
-  g.discardAction.push(played);
-  const tgt = g.players[targetIdx].name;
-
-  if (card.name === "Sabotage") {
-    if (g.players[targetIdx].supply.length > 0) {
-      g.pendingSabotage = { targetIdx, by: state.playerName };
-      g.log.push({ msg: `${state.playerName} sabotaged ${tgt}! ${tgt} must discard 1 Supply.`, type: "bad" });
-    } else {
-      g.log.push({ msg: `${state.playerName} tried to sabotage ${tgt} but they have no supplies!`, type: "warning" });
-    }
-  } else if (card.name === "Pilfer") {
-    if (g.players[targetIdx].supply.length > 0) {
-      const ri = Math.floor(Math.random() * g.players[targetIdx].supply.length);
-      const stolen = g.players[targetIdx].supply.splice(ri, 1)[0];
-      g.players[idx].supply.push(stolen);
-      g.log.push({ msg: `${state.playerName} pilfered ${stolen.name} from ${tgt}!`, type: "bad" });
-    } else {
-      g.log.push({ msg: `${state.playerName} tried to pilfer from ${tgt} but nothing there!`, type: "warning" });
-    }
-  } else if (card.name === "Pickpocket") {
-    if (g.players[targetIdx].actions.length > 0) {
-      const ri = Math.floor(Math.random() * g.players[targetIdx].actions.length);
-      const stolen = g.players[targetIdx].actions.splice(ri, 1)[0];
-      g.players[idx].actions.push(stolen);
-      g.log.push({ msg: `${state.playerName} pickpocketed an Action from ${tgt}!`, type: "bad" });
-    } else {
-      g.log.push({ msg: `${state.playerName} tried to pickpocket ${tgt} but no actions!`, type: "warning" });
-    }
-  } else if (card.name === "Slow Down") {
-    g.players[targetIdx].slowedDown = true;
-    g.log.push({ msg: `${state.playerName} slowed down ${tgt}! Only 1 Action next turn.`, type: "bad" });
-  }
-
-  g.actionsPlayed++;
-  g.version = Date.now();
-  await GameStorage.set(state.roomCode, g);
-  setState({ game: g, pendingTarget: null });
-}
-
-async function discardForSabotage(supplyIdx) {
-  const g = JSON.parse(JSON.stringify(state.game));
-  const idx = state.myIdx;
-  const discarded = g.players[idx].supply.splice(supplyIdx, 1)[0];
-  g.discardSupply.push(discarded);
-  g.log.push({ msg: `${state.playerName} discarded ${discarded.name} from sabotage.`, type: "bad" });
-  g.pendingSabotage = null;
-  g.version = Date.now();
-  await GameStorage.set(state.roomCode, g);
-  setState({ game: g });
-}
-
-async function endTurn() {
-  const g = JSON.parse(JSON.stringify(state.game));
-  const alive = g.players.filter(p => !p.eliminated);
-  g.log.push({ msg: `${state.playerName} ended their turn.`, type: "system" });
-  g.turnsThisCycle++;
-  g.actionsPlayed = 0;
-  g.turnPhase = "draw";
-
-  let next = (g.currentPlayer + 1) % g.players.length;
-  let loops = 0;
-  while (g.players[next].eliminated && loops < g.players.length) {
-    next = (next + 1) % g.players.length;
-    loops++;
-  }
-  g.currentPlayer = next;
-
-  if (g.turnsThisCycle >= alive.length) {
-    g.turnsThisCycle = 0;
-    g.cycle++;
-    g.firstCycle = false;
-    g.log.push({ msg: `═══ Cycle ${g.cycle} begins! ═══`, type: "event" });
-    g.log.push({ msg: `(Event system coming in Step 4)`, type: "warning" });
-  }
-
-  g.version = Date.now();
-  await GameStorage.set(state.roomCode, g);
-  setState({ game: g, pendingTarget: null });
-}
-
-// ═══════════════════════════
-// LOBBY ACTIONS
-// ═══════════════════════════
-async function createRoom() {
-  const name = state.playerName.trim();
-  if (!name) { setState({ error: "Enter your name!" }); return; }
-  const code = genCode();
-  const lobby = {
-    status: "lobby",
-    host: name,
-    players: [{ name, id: 0 }],
-    created: Date.now(),
-    version: Date.now(),
-  };
-  await GameStorage.set(code, lobby);
-  setState({ screen: "lobby", roomCode: code, game: lobby, error: "" });
-  startPolling(code, name);
-}
-
-async function joinRoom() {
-  const name = state.playerName.trim();
-  const code = state.roomCode.trim().toUpperCase();
-  if (!name) { setState({ error: "Enter your name!" }); return; }
-  if (code.length < 5) { setState({ error: "Enter a valid room code!" }); return; }
-  const data = await GameStorage.get(code);
-  if (!data) { setState({ error: "Room not found!" }); return; }
-  if (data.status !== "lobby") { setState({ error: "Game already started!" }); return; }
-  if (data.players.length >= 8) { setState({ error: "Room full!" }); return; }
-  if (data.players.find(p => p.name === name)) { setState({ error: "Name taken!" }); return; }
-  data.players.push({ name, id: data.players.length });
-  data.version = Date.now();
-  await GameStorage.set(code, data);
-  setState({ screen: "lobby", roomCode: code, game: data, myIdx: data.players.length - 1, error: "" });
-  startPolling(code, name);
-}
-
-async function startGame() {
-  const g = state.game;
-  if (g.players.length < 2) { setState({ error: "Need 2+ players!" }); return; }
-  const gameState = initGame(g.players);
-  await GameStorage.set(state.roomCode, gameState);
-  const idx = g.players.findIndex(p => p.name === state.playerName);
-  if (state.pollTimer) clearInterval(state.pollTimer);
-  setState({ screen: "game", myIdx: idx, game: gameState, error: "" });
-  startPolling(state.roomCode, state.playerName);
-}
-
-// ═══════════════════════════
-// RENDER
-// ═══════════════════════════
-function h(tag, attrs = {}, ...children) {
-  const el = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (k === "style" && typeof v === "object") {
-      Object.assign(el.style, v);
-    } else if (k.startsWith("on")) {
-      el.addEventListener(k.slice(2).toLowerCase(), v);
-    } else if (k === "className") {
-      el.className = v;
-    } else if (k === "innerHTML") {
-      el.innerHTML = v;
-    } else {
-      el.setAttribute(k, v);
-    }
-  }
-  children.flat().forEach(c => {
-    if (c == null) return;
-    el.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
-  });
-  return el;
-}
-
-function render() {
-  app.innerHTML = "";
-  if (state.screen === "menu") renderMenu();
-  else if (state.screen === "create" || state.screen === "join") renderForm();
-  else if (state.screen === "lobby") renderLobby();
-  else if (state.screen === "game") renderGame();
-}
-
-function renderMenu() {
-  app.appendChild(h("div", { style: { marginTop: "60px" } },
-    h("div", { className: "title", style: { fontSize: "36px" } },
-      h("span", { className: "g" }, "Ration"),
-      " ",
-      h("span", { className: "r" }, "Ruckus!")
-    ),
-    h("p", { className: "subtitle", style: { marginBottom: "40px" } }, "Hoard. Survive. Outlast."),
-    h("div", { className: "form-stack" },
-      h("button", { className: "btn btn-amber", onClick: () => setState({ screen: "create" }) }, "Create Game"),
-      h("button", { className: "btn btn-green", onClick: () => setState({ screen: "join" }) }, "Join Game"),
-      h("p", { className: "version-note" },
-        "Step 1 Build — Core actions playable. Reactions, specials, events coming soon.")
-    )
-  ));
-}
-
-function renderForm() {
-  const isCreate = state.screen === "create";
-  app.appendChild(h("div", {},
-    h("div", { className: "title" }, h("span", { className: "g" }, "Ration"), " ", h("span", { className: "r" }, "Ruckus!")),
-    h("p", { className: "subtitle" }, isCreate ? "Create a Game" : "Join a Game"),
-    h("div", { className: "form-stack" },
-      (() => {
-        const inp = h("input", { className: "input", placeholder: "Your name", maxLength: "16", value: state.playerName });
-        inp.addEventListener("input", e => { state.playerName = e.target.value; state.error = ""; });
-        return inp;
-      })(),
-      ...(!isCreate ? [(() => {
-        const inp = h("input", { className: "input input-code", placeholder: "ROOM CODE", maxLength: "5", value: state.roomCode });
-        inp.addEventListener("input", e => { state.roomCode = e.target.value.toUpperCase(); state.error = ""; });
-        return inp;
-      })()] : []),
-      h("button", { className: `btn ${isCreate ? "btn-amber" : "btn-green"}`, onClick: isCreate ? createRoom : joinRoom },
-        isCreate ? "Create Room" : "Join Room"),
-      h("button", { className: "btn btn-dim", onClick: () => setState({ screen: "menu", error: "" }) }, "Back"),
-      state.error ? h("p", { className: "error" }, state.error) : null
-    )
-  ));
-}
-
-function renderLobby() {
-  const g = state.game;
-  const isHost = g.players[0]?.name === state.playerName;
-  app.appendChild(h("div", {},
-    h("div", { className: "title" }, h("span", { className: "g" }, "Ration"), " ", h("span", { className: "r" }, "Ruckus!")),
-    h("p", { className: "subtitle" }, "Waiting Room"),
-    h("div", { className: "panel", style: { maxWidth: "360px", margin: "0 auto", textAlign: "center" } },
-      h("p", { style: { fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" } }, "ROOM CODE"),
-      h("p", { className: "room-code" }, state.roomCode),
-      h("p", { style: { fontSize: "13px", color: "var(--text-dim)", marginBottom: "16px" } }, "Share this code with other players"),
-      h("div", { style: { textAlign: "left", marginBottom: "16px" } },
-        h("p", { style: { fontSize: "12px", color: "var(--text-dim)", marginBottom: "8px" } }, `PLAYERS (${g.players.length}/8)`),
-        ...g.players.map((p, i) =>
-          h("div", { className: "player-row" },
-            h("span", {}, p.name),
-            i === 0 ? h("span", { className: "badge", style: { background: "var(--amber)22", color: "var(--amber)" } }, "HOST") :
-            p.name === state.playerName ? h("span", { className: "badge", style: { background: "var(--green)22", color: "var(--green)" } }, "YOU") : null
-          )
-        )
-      ),
-      isHost ?
-        h("button", {
-          className: `btn btn-green`,
-          onClick: startGame,
-          disabled: g.players.length < 2 ? "true" : undefined
-        }, g.players.length < 2 ? "Need 2+ Players" : `Start Game (${g.players.length} players)`) :
-        h("p", { style: { fontSize: "13px", color: "var(--text-dim)" } }, "Waiting for host to start..."),
-      state.error ? h("p", { className: "error", style: { marginTop: "8px" } }, state.error) : null
-    )
-  ));
-}
-
-function renderGame() {
-  const g = state.game;
-  if (!g || !g.players) return;
-  const me = g.players[state.myIdx];
-  const isMyTurn = g.currentPlayer === state.myIdx && !me?.eliminated;
-  const alive = g.players.filter(p => !p.eliminated);
-  const winner = alive.length === 1 ? alive[0] : null;
-  const sabotageOnMe = g.pendingSabotage && g.pendingSabotage.targetIdx === state.myIdx;
-
-  const els = [];
-
-  // Header
-  els.push(h("div", { className: "header-bar" },
-    h("div", {},
-      h("div", { style: { fontSize: "20px", fontWeight: "800" } },
-        h("span", { className: "g" }, "Ration"), " ", h("span", { className: "r" }, "Ruckus!")),
-      h("div", { style: { fontSize: "11px", color: "var(--text-dim)" } }, `Room: ${state.roomCode} • Cycle ${g.cycle}`)
-    ),
-    h("div", { style: { textAlign: "right" } },
-      h("div", { className: "turn-indicator" }, isMyTurn ? "YOUR TURN" : `${g.players[g.currentPlayer]?.name}'s turn`),
-      h("div", { style: { fontSize: "11px", color: "var(--text-dim)" } },
-        isMyTurn && g.turnPhase === "draw" ? "Draw an Action card" :
-        isMyTurn && g.turnPhase === "play" ? `Actions: ${g.actionsPlayed}/${g.maxActions}` : "Waiting...")
-    )
-  ));
-
-  // Winner
-  if (winner) {
-    els.push(h("div", { className: "panel winner-box" },
-      h("div", { style: { fontSize: "40px", marginBottom: "8px" } }, "🏆"),
-      h("div", { style: { fontSize: "22px", fontWeight: "800", color: "var(--amber)" } }, `${winner.name} Wins!`),
-      h("p", { style: { color: "var(--text-dim)", fontSize: "13px" } }, "Last critter standing!")
-    ));
-  }
-
-  // Sabotage prompt
-  if (sabotageOnMe) {
-    els.push(h("div", { className: "panel sabotage-box" },
-      h("p", { style: { fontSize: "14px", fontWeight: "700", color: "var(--red)", marginBottom: "8px" } },
-        `💣 Sabotaged by ${g.pendingSabotage.by}! Choose a Supply to discard:`),
-      h("div", { className: "cards-row" },
-        ...me.supply.map((s, i) =>
-          h("div", { className: "card card-supply playable", onClick: () => discardForSabotage(i) },
-            h("span", { className: "emoji" }, s.emoji),
-            h("span", { className: "name" }, s.name))
-        )
-      )
-    ));
-  }
-
-  // Players
-  els.push(h("div", { className: "panel" },
-    h("div", { className: "section-label", style: { color: "var(--text-dim)" } }, "PLAYERS"),
-    h("div", { className: "players-bar" },
-      ...g.players.map((p, i) =>
-        h("div", {
-          className: `player-chip ${p.eliminated ? "eliminated" : i === g.currentPlayer ? "active" : ""}`,
-          style: !p.eliminated && i !== g.currentPlayer ? { background: "var(--surface-light)" } : {}
-        },
-          h("span", { style: { fontWeight: "700" } }, p.name),
-          i === state.myIdx ? h("span", { style: { color: "var(--blue)" } }, " (you)") : null,
-          h("span", { style: { color: "var(--green)", marginLeft: "6px" } }, p.eliminated ? "☠️" : `📦${p.supply.length}`),
-          !p.eliminated ? h("span", { style: { color: "var(--amber)", marginLeft: "4px" } }, `🃏${p.actions.length}`) : null,
-          p.slowedDown && !p.eliminated ? h("span", { style: { marginLeft: "4px" } }, "🐌") : null
-        )
-      )
-    )
-  ));
-
-  // Target selection
-  if (state.pendingTarget) {
-    els.push(h("div", { className: "panel target-box" },
-      h("p", { style: { fontSize: "14px", fontWeight: "700", color: "var(--amber)", marginBottom: "8px" } },
-        `${state.pendingTarget.card.emoji} ${state.pendingTarget.card.name} — Choose a target:`),
-      h("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
-        ...g.players.map((p, i) => {
-          if (i === state.myIdx || p.eliminated) return null;
-          return h("button", { className: "btn btn-amber btn-small target-btn", onClick: () => execTargeted(i) },
-            `${p.name} (📦${p.supply.length})`);
-        }).filter(Boolean),
-        h("button", { className: "btn btn-dim btn-small", onClick: () => setState({ pendingTarget: null }) }, "Cancel")
-      )
-    ));
-  }
-
-  // My Supplies
-  if (me && !me.eliminated) {
-    els.push(h("div", { className: "panel" },
-      h("div", { className: "section-label", style: { color: "var(--green)" } }, `YOUR SUPPLIES (${me.supply.length})`),
-      h("div", { className: "cards-row" },
-        me.supply.length === 0 ?
-          h("p", { style: { fontSize: "12px", color: "var(--text-dim)" } }, "No supplies! You're in danger!") :
-          ...me.supply.map(s =>
-            h("div", { className: "card card-supply" },
-              h("span", { className: "emoji" }, s.emoji),
-              h("span", { className: "name" }, s.name),
-              s.value === 2 ? h("span", { className: "badge", style: { background: "var(--amber)33", color: "var(--amber)", marginTop: "3px", fontSize: "9px" } }, "x2") : null
-            )
-          )
-      )
-    ));
-  }
-
-  // My Actions
-  if (me && !me.eliminated) {
-    const canPlayCards = isMyTurn && g.turnPhase === "play" && g.actionsPlayed < g.maxActions;
-    els.push(h("div", { className: "panel" },
-      h("div", { className: "section-label", style: { color: "var(--amber)" } },
-        `YOUR ACTIONS (${me.actions.length})`,
-        canPlayCards ? h("span", { style: { color: "var(--text-dim)", fontWeight: "400" } }, ` — tap to play (${g.actionsPlayed}/${g.maxActions})`) : null
-      ),
-      h("div", { className: "cards-row" },
-        me.actions.length === 0 ?
-          h("p", { style: { fontSize: "12px", color: "var(--text-dim)" } }, "No actions!") :
-          ...me.actions.map((a, i) => {
-            const functional = FUNCTIONAL_CARDS.includes(a.name);
-            const canPlay = canPlayCards && functional;
-            return h("div", {
-              className: `card card-action ${canPlay ? "playable" : "dim"} ${a.type === "reaction" ? "card-reaction" : ""}`,
-              onClick: canPlay ? () => playCard(i) : undefined,
-            },
-              h("span", { className: "emoji" }, a.emoji),
-              h("span", { className: "name" }, a.name),
-              h("span", { className: "desc" }, a.desc),
-              a.type === "reaction" ? h("span", { className: "badge", style: { background: "var(--red)33", color: "var(--red)", marginTop: "3px", fontSize: "8px" } }, "REACT") : null,
-              a.type === "special" ? h("span", { className: "badge", style: { background: "var(--blue)33", color: "var(--blue)", marginTop: "3px", fontSize: "8px" } }, "SPECIAL") : null
-            );
-          })
-      )
-    ));
-  }
-
-  // Controls
-  if (isMyTurn && !winner && me && !me.eliminated) {
-    if (g.turnPhase === "draw") {
-      els.push(h("div", { className: "controls" },
-        h("button", { className: "btn btn-amber", onClick: drawAction }, "🃏 Draw Action Card")
-      ));
-    } else if (g.turnPhase === "play") {
-      els.push(h("div", { className: "controls" },
-        h("button", { className: "btn btn-green", onClick: endTurn },
-          `✓ End Turn ${g.actionsPlayed > 0 ? `(${g.actionsPlayed} played)` : "(pass)"}`)
-      ));
-    }
-  }
-
-  // Eliminated
-  if (me?.eliminated) {
-    els.push(h("div", { className: "panel eliminated-box" },
-      h("div", { style: { fontSize: "30px", marginBottom: "6px" } }, "☠️"),
-      h("p", { style: { fontWeight: "700", color: "var(--red)" } }, "You've been eliminated!"),
-      h("p", { style: { fontSize: "12px", color: "var(--text-dim)" } }, "Spectating...")
-    ));
-  }
-
-  // Log
-  const logEntries = (g.log || []).slice(-20);
-  const logBox = h("div", { className: "panel" },
-    h("div", { className: "section-label", style: { color: "var(--text-dim)" } }, "GAME LOG"),
-    h("div", { className: "log-box" },
-      ...logEntries.map(e =>
-        h("div", { className: `log-entry log-${e.type}` }, e.msg)
-      )
-    )
-  );
-  els.push(logBox);
-
-  // Deck counts
-  els.push(h("div", { className: "deck-counts" },
-    h("span", {}, `📦 Supply: ${g.supplyDeck?.length || 0}`),
-    h("span", {}, `🃏 Action: ${g.actionDeck?.length || 0}`),
-    h("span", {}, `⚡ Event: ${g.eventDeck?.length || 0}`)
-  ));
-
-  els.forEach(el => app.appendChild(el));
-
-  // Auto-scroll log
-  const lb = app.querySelector('.log-box');
-  if (lb) lb.scrollTop = lb.scrollHeight;
-}
-
-// ═══════════════════════════
-// FIREBASE SETUP SCREEN
-// ═══════════════════════════
-(function checkSetup() {
-  // Check if Firebase URL is configured
-  const saved = localStorage.getItem("rr_firebase_url");
-  if (saved) {
-    FIREBASE_URL = saved;
-    useLocalFallback = false;
-  }
-
-  // Add setup option to menu
-  const origRender = render;
-  render = function() {
-    origRender();
-    if (state.screen === "menu") {
-      const setupBtn = h("button", {
-        className: "btn btn-dim",
-        style: { maxWidth: "320px", margin: "12px auto 0", display: "block", fontSize: "12px" },
-        onClick: showSetup,
-      }, FIREBASE_URL ? "✅ Firebase Connected — Change" : "⚙️ Setup Firebase (for online multiplayer)");
-      app.querySelector('.form-stack')?.appendChild(setupBtn);
-
-      if (!FIREBASE_URL) {
-        const note = h("p", {
-          style: { fontSize: "11px", color: "var(--text-dim)", textAlign: "center", maxWidth: "320px", margin: "8px auto", lineHeight: "1.5" }
-        }, "Without Firebase, multiplayer only works on the same device (open in 2 tabs). Set up Firebase for free online multiplayer!");
-        app.querySelector('.form-stack')?.appendChild(note);
-      }
-    }
-  };
-
-  function showSetup() {
-    app.innerHTML = "";
-    app.appendChild(h("div", {},
-      h("div", { className: "title" }, h("span", { className: "g" }, "Ration"), " ", h("span", { className: "r" }, "Ruckus!")),
-      h("p", { className: "subtitle" }, "Firebase Setup (Free)"),
-      h("div", { className: "panel", style: { maxWidth: "500px", margin: "0 auto" } },
-        h("p", { style: { fontSize: "14px", fontWeight: "700", marginBottom: "12px" } }, "Quick Setup (5 minutes):"),
-        h("p", { style: { fontSize: "13px", color: "var(--text-dim)", marginBottom: "6px", lineHeight: "1.6" } },
-          "1. Go to console.firebase.google.com"),
-        h("p", { style: { fontSize: "13px", color: "var(--text-dim)", marginBottom: "6px", lineHeight: "1.6" } },
-          "2. Click 'Create Project' → name it anything → Continue"),
-        h("p", { style: { fontSize: "13px", color: "var(--text-dim)", marginBottom: "6px", lineHeight: "1.6" } },
-          "3. In the left sidebar, click 'Build' → 'Realtime Database'"),
-        h("p", { style: { fontSize: "13px", color: "var(--text-dim)", marginBottom: "6px", lineHeight: "1.6" } },
-          "4. Click 'Create Database' → choose any location → Start in TEST MODE"),
-        h("p", { style: { fontSize: "13px", color: "var(--text-dim)", marginBottom: "12px", lineHeight: "1.6" } },
-          "5. Copy your database URL (looks like: https://your-project-default-rtdb.firebaseio.com)"),
-        (() => {
-          const inp = h("input", {
-            className: "input",
-            placeholder: "Paste your Firebase URL here",
-            style: { textAlign: "left", letterSpacing: "0", fontSize: "14px", marginBottom: "12px" },
-            value: FIREBASE_URL,
-          });
-          inp.addEventListener("input", e => { FIREBASE_URL = e.target.value.trim(); });
-          return inp;
-        })(),
-        h("div", { style: { display: "flex", gap: "8px" } },
-          h("button", { className: "btn btn-green", onClick: () => {
-            if (FIREBASE_URL && FIREBASE_URL.startsWith("https://")) {
-              localStorage.setItem("rr_firebase_url", FIREBASE_URL);
-              useLocalFallback = false;
-              setState({ screen: "menu" });
-            } else {
-              alert("Please enter a valid Firebase URL starting with https://");
-            }
-          }}, "Save & Connect"),
-          h("button", { className: "btn btn-dim", onClick: () => setState({ screen: "menu" }) }, "Cancel")
-        ),
-        FIREBASE_URL ? h("p", { style: { fontSize: "11px", color: "var(--green)", marginTop: "8px" } },
-          "Currently connected to: " + FIREBASE_URL) : null
-      )
-    ));
-  }
-
-  render();
-})();
+render();
 </script>
 </body>
 </html>

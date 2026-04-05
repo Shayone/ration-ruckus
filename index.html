@@ -108,10 +108,20 @@ var $=document.getElementById("app");
 
 function set(u){Object.assign(S,u);render();}
 
+function sanitizeGame(g){
+  if(!g)return g;
+  g.supplyDeck=g.supplyDeck||[];g.actionDeck=g.actionDeck||[];g.eventDeck=g.eventDeck||[];
+  g.discardSupply=g.discardSupply||[];g.discardAction=g.discardAction||[];g.discardEvent=g.discardEvent||[];
+  g.log=g.log||[];g.players=g.players||[];
+  for(var p=0;p<g.players.length;p++){g.players[p].supply=g.players[p].supply||[];g.players[p].actions=g.players[p].actions||[];}
+  return g;
+}
+
 function poll(code,name){
   if(S.poll)clearInterval(S.poll);
   S.poll=setInterval(async function(){
     var d=await DB.get(code);if(!d)return;
+    sanitizeGame(d);
     if(S.screen==="lobby"&&d.status==="playing"){clearInterval(S.poll);set({screen:"game",myIdx:d.players.findIndex(function(p){return p.name===name;}),game:d});poll(code,name);}
     else if(S.screen==="game"&&d.version!==S.game.version){set({game:d});}
     else if(S.screen==="lobby"){set({game:d});}
@@ -147,7 +157,11 @@ function hasPendingState(g){
 async function freshGame(){
   try{
     var f=await DB.get(S.code);
-    if(f){S.game=f;return JSON.parse(JSON.stringify(f));}
+    if(f){
+      sanitizeGame(f);
+      S.game=JSON.parse(JSON.stringify(f));
+      return JSON.parse(JSON.stringify(f));
+    }
   }catch(e){console.error("freshGame fetch error",e);}
   return JSON.parse(JSON.stringify(S.game));
 }
@@ -163,28 +177,21 @@ window.drawAction=async function(){
 };
 
 window.playCard=async function(ci){
-  try{
-    console.log("playCard called with ci="+ci);
-    var g=await freshGame();
-    console.log("freshGame returned, actionsPlayed="+g.actionsPlayed+", maxActions="+g.maxActions+", turnPhase="+g.turnPhase);
-    var me=g.players[S.myIdx],card=me.actions[ci];
-    console.log("card=",card?card.name:"UNDEFINED","CORE check=",card?CORE.indexOf(card.name):-1);
-    if(!card||CORE.indexOf(card.name)<0||g.actionsPlayed>=g.maxActions){console.log("BLOCKED: card check failed");return;}
-    if(card.target==="other"){set({pTarget:{ci:ci,card:card}});return;}
-    if(card.target==="multi"){
-      var othersAlive=g.players.filter(function(p,idx){return idx!==S.myIdx&&!p.eliminated;}).length;
-      if(othersAlive<2){return;}
-      set({pTarget:{ci:ci,card:card,needTwo:true,selected:[]}});return;
-    }
-    console.log("executing "+card.name);
-    if(card.name==="Scrounge")window.execScrounge(ci);
-    else if(card.name==="Hustle")window.execHustle(ci);
-    else if(card.name==="Shelter")window.execShelter(ci);
-    else if(card.name==="Foresight")window.execForesight(ci);
-    else if(card.name==="Recurring Nightmare")window.execRecurringNightmare(ci);
-    else if(card.name==="Scavenger")window.execScavenger(ci);
-    else{console.log("NO HANDLER for "+card.name);}
-  }catch(e){console.error("playCard error:",e);}
+  var g=await freshGame();
+  var me=g.players[S.myIdx],card=me.actions[ci];
+  if(!card||CORE.indexOf(card.name)<0||g.actionsPlayed>=g.maxActions)return;
+  if(card.target==="other"){set({pTarget:{ci:ci,card:card}});return;}
+  if(card.target==="multi"){
+    var othersAlive=g.players.filter(function(p,idx){return idx!==S.myIdx&&!p.eliminated;}).length;
+    if(othersAlive<2){return;}
+    set({pTarget:{ci:ci,card:card,needTwo:true,selected:[]}});return;
+  }
+  if(card.name==="Scrounge")window.execScrounge(ci);
+  else if(card.name==="Hustle")window.execHustle(ci);
+  else if(card.name==="Shelter")window.execShelter(ci);
+  else if(card.name==="Foresight")window.execForesight(ci);
+  else if(card.name==="Recurring Nightmare")window.execRecurringNightmare(ci);
+  else if(card.name==="Scavenger")window.execScavenger(ci);
 };
 
 window.execShelter=async function(ci){

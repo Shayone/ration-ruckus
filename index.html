@@ -61,6 +61,22 @@
   .log-warning { color:var(--text-dim); } .log-system { color:var(--text); }
   .deck-counts { display:flex; gap:12px; justify-content:center; font-size:11px; color:var(--text-dim); margin-top:8px; }
   .note { font-size:12px; color:var(--text-dim); text-align:center; margin-top:20px; line-height:1.6; }
+  .overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:100; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .overlay-content { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px; max-width:700px; width:100%; max-height:90vh; overflow-y:auto; }
+  .overlay-title { font-size:22px; font-weight:800; margin-bottom:16px; text-align:center; }
+  .card-grid { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+  .section-label { font-size:14px; font-weight:700; margin:16px 0 8px; padding-bottom:4px; border-bottom:1px solid var(--border); }
+  .event-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.9); z-index:200; display:flex; align-items:center; justify-content:center; animation:eventFadeIn 0.3s ease-out; }
+  .event-card-big { text-align:center; padding:32px; border-radius:20px; border:3px solid; min-width:250px; animation:eventPulse 0.6s ease-out; }
+  .event-card-big .emoji { font-size:64px; display:block; margin-bottom:12px; }
+  .event-card-big .cname { font-size:24px; font-weight:800; display:block; margin-bottom:8px; }
+  .event-card-big .cdesc { font-size:14px; display:block; }
+  @keyframes eventFadeIn { from{opacity:0} to{opacity:1} }
+  @keyframes eventPulse { 0%{transform:scale(0.5);opacity:0} 60%{transform:scale(1.05)} 100%{transform:scale(1);opacity:1} }
+  .rules-section { margin-bottom:16px; }
+  .rules-section h3 { font-size:14px; color:var(--amber); margin-bottom:6px; }
+  .rules-section p, .rules-section li { font-size:12px; color:var(--text-dim); line-height:1.6; }
+  .rules-section ul { padding-left:18px; }
 </style>
 </head>
 <body>
@@ -103,7 +119,7 @@ function initGame(players){
   return{status:"playing",players:hands,supplyDeck:sd,actionDeck:ad,eventDeck:ed,discardSupply:[],discardAction:[],discardEvent:[],currentPlayer:0,cycle:1,turnPhase:"draw",actionsPlayed:0,maxActions:3,log:[{msg:"Game started! Let the ruckus begin!",type:"system"}],firstCycle:true,turnsThisCycle:0,pendingSabotage:null,pendingReaction:null,pendingForesight:null,pendingNightmare:null,version:Date.now()};
 }
 
-var S={screen:"menu",name:"",code:"",myIdx:-1,game:null,err:"",poll:null,pTarget:null};
+var S={screen:"menu",name:"",code:"",myIdx:-1,game:null,err:"",poll:null,pTarget:null,showOverlay:null,eventAnim:null};
 var $=document.getElementById("app");
 
 function set(u){Object.assign(S,u);render();}
@@ -123,6 +139,7 @@ function poll(code,name){
     var d=await DB.get(code);if(!d)return;
     sanitizeGame(d);
     if(S.screen==="lobby"&&d.status==="playing"){clearInterval(S.poll);set({screen:"game",myIdx:d.players.findIndex(function(p){return p.name===name;}),game:d});poll(code,name);}
+    else if(S.screen==="game"&&d.status==="lobby"){clearInterval(S.poll);set({screen:"lobby",game:d,pTarget:null,showOverlay:null,eventAnim:null});poll(code,name);}
     else if(S.screen==="game"&&d.version!==S.game.version){set({game:d});}
     else if(S.screen==="lobby"){set({game:d});}
   },1500);
@@ -182,8 +199,12 @@ window.playCard=async function(ci){
   if(!card||CORE.indexOf(card.name)<0||g.actionsPlayed>=g.maxActions)return;
   if(card.target==="other"){set({pTarget:{ci:ci,card:card}});return;}
   if(card.target==="multi"){
-    var othersAlive=g.players.filter(function(p,idx){return idx!==S.myIdx&&!p.eliminated;}).length;
-    if(othersAlive<2){return;}
+    var othersAlive=g.players.filter(function(p,idx){return idx!==S.myIdx&&!p.eliminated;});
+    if(othersAlive.length===0)return;
+    if(othersAlive.length===1){
+      // 2-player mode: target the sole opponent, they lose 2 supplies
+      set({pTarget:{ci:ci,card:card,twoPlayer:true,soloTarget:g.players.indexOf(othersAlive[0])}});return;
+    }
     set({pTarget:{ci:ci,card:card,needTwo:true,selected:[]}});return;
   }
   if(card.name==="Scrounge")window.execScrounge(ci);
@@ -237,7 +258,7 @@ window.execCollateral=async function(targets){
   if(g.players[i].supply.length>0){
     var lost=g.players[i].supply.pop();
     g.discardSupply.push(lost);
-    g.log.push({msg:S.name+" lost "+lost.name+" from Collateral Damage!",type:"bad"});
+    g.log.push({msg:S.name+" lost 1 supply from Collateral Damage!",type:"bad"});
   }
   // Each target loses 1 supply (random)
   for(var t=0;t<targets.length;t++){
@@ -246,11 +267,34 @@ window.execCollateral=async function(targets){
       var ri=Math.floor(Math.random()*g.players[ti].supply.length);
       var sl=g.players[ti].supply.splice(ri,1)[0];
       g.discardSupply.push(sl);
-      g.log.push({msg:g.players[ti].name+" lost "+sl.name+" from Collateral Damage!",type:"bad"});
+      g.log.push({msg:g.players[ti].name+" lost 1 supply from Collateral Damage!",type:"bad"});
     }else{
       g.log.push({msg:g.players[ti].name+" had no supplies to lose!",type:"warning"});
     }
   }
+  g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
+};
+// 2-player Collateral Damage: you lose 1, target loses 2
+window.execCollateral2P=async function(){
+  var pt=S.pTarget,g=await freshGame(),i=S.myIdx,ti=pt.soloTarget;
+  g.discardAction.push(g.players[i].actions.splice(pt.ci,1)[0]);
+  // Self loses 1 supply
+  if(g.players[i].supply.length>0){
+    var lost=g.players[i].supply.pop();
+    g.discardSupply.push(lost);
+    g.log.push({msg:S.name+" lost 1 supply from Collateral Damage!",type:"bad"});
+  }
+  // Target loses 2 supply
+  var tLost=0;
+  for(var t=0;t<2;t++){
+    if(g.players[ti].supply.length>0){
+      var ri=Math.floor(Math.random()*g.players[ti].supply.length);
+      var sl=g.players[ti].supply.splice(ri,1)[0];
+      g.discardSupply.push(sl);
+      tLost++;
+    }
+  }
+  g.log.push({msg:g.players[ti].name+" lost "+tLost+" supply from Collateral Damage!",type:"bad"});
   g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
 };
 window.collateralPick=function(ti){
@@ -286,6 +330,7 @@ window.nightmarePick=async function(eventIdx){
   if(!pn||pn.playerIdx!==S.myIdx)return;
   var chosenEvent=pn.events[eventIdx];
   g.log.push({msg:S.name+" triggered Recurring Nightmare: "+chosenEvent.name+"! ("+S.name+" is immune)",type:"event"});
+  showEventAnimation(chosenEvent);
   resolveEvent(g, chosenEvent, pn.playerIdx);
   checkEliminations(g);
   // Check win
@@ -325,13 +370,13 @@ window.execCoinToss=async function(ti){
   var heads=Math.random()<0.5;
   if(heads){
     g.log.push({msg:S.name+" flipped HEADS against "+tn+"!",type:"good"});
-    if(g.supplyDeck.length>0){var drawn=g.supplyDeck.shift();g.players[i].supply.push(drawn);g.log.push({msg:S.name+" gained "+drawn.name+"!",type:"good"});}
-    if(g.players[ti].supply.length>0){var ri=Math.floor(Math.random()*g.players[ti].supply.length);var lost=g.players[ti].supply.splice(ri,1)[0];g.discardSupply.push(lost);g.log.push({msg:tn+" lost "+lost.name+"!",type:"bad"});}
+    if(g.supplyDeck.length>0){var drawn=g.supplyDeck.shift();g.players[i].supply.push(drawn);g.log.push({msg:S.name+" gained a Supply!",type:"good"});}
+    if(g.players[ti].supply.length>0){var ri=Math.floor(Math.random()*g.players[ti].supply.length);var lost=g.players[ti].supply.splice(ri,1)[0];g.discardSupply.push(lost);g.log.push({msg:tn+" lost a Supply!",type:"bad"});}
     else{g.log.push({msg:tn+" had no supplies to lose!",type:"warning"});}
   }else{
     g.log.push({msg:S.name+" flipped TAILS against "+tn+"!",type:"bad"});
-    if(g.supplyDeck.length>0){var drawn2=g.supplyDeck.shift();g.players[ti].supply.push(drawn2);g.log.push({msg:tn+" gained "+drawn2.name+"!",type:"good"});}
-    if(g.players[i].supply.length>0){var ri2=Math.floor(Math.random()*g.players[i].supply.length);var lost2=g.players[i].supply.splice(ri2,1)[0];g.discardSupply.push(lost2);g.log.push({msg:S.name+" lost "+lost2.name+"!",type:"bad"});}
+    if(g.supplyDeck.length>0){var drawn2=g.supplyDeck.shift();g.players[ti].supply.push(drawn2);g.log.push({msg:tn+" gained a Supply!",type:"good"});}
+    if(g.players[i].supply.length>0){var ri2=Math.floor(Math.random()*g.players[i].supply.length);var lost2=g.players[i].supply.splice(ri2,1)[0];g.discardSupply.push(lost2);g.log.push({msg:S.name+" lost a Supply!",type:"bad"});}
     else{g.log.push({msg:S.name+" had no supplies to lose!",type:"warning"});}
   }
   g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
@@ -340,7 +385,7 @@ window.execCoinToss=async function(ti){
 window.execScrounge=async function(ci){
   var g=await freshGame(),i=S.myIdx;
   g.discardAction.push(g.players[i].actions.splice(ci,1)[0]);
-  if(g.supplyDeck.length>0){var d=g.supplyDeck.shift();g.players[i].supply.push(d);g.log.push({msg:S.name+" scrounged "+d.name+"!",type:"good"});}
+  if(g.supplyDeck.length>0){var d=g.supplyDeck.shift();g.players[i].supply.push(d);g.log.push({msg:S.name+" scrounged a Supply card!",type:"good"});}
   else{g.log.push({msg:"Supply deck empty!",type:"warning"});}
   g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
 };
@@ -401,10 +446,10 @@ window.execTargeted=async function(ti){
       targetName:tn,
       canBoomerang:canBoomerang,
       canDecoy:canDecoy,
-      expiresAt:Date.now()+5000,
+      expiresAt:Date.now()+10000,
       resolved:false
     };
-    g.log.push({msg:S.name+" played "+card.name+" on "+tn+"! "+tn+" has 5 seconds to react...",type:"event"});
+    g.log.push({msg:S.name+" played "+card.name+" on "+tn+"! "+tn+" has 10 seconds to react...",type:"event"});
     g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
     // Start checking for timeout
     window.checkReactionTimeout();
@@ -430,7 +475,7 @@ function resolveTargetedEffect(g, cardName, attackerIdx, targetIdx){
       var ri=Math.floor(Math.random()*g.players[targetIdx].supply.length);
       var st=g.players[targetIdx].supply.splice(ri,1)[0];
       g.players[attackerIdx].supply.push(st);
-      g.log.push({msg:an+" pilfered "+st.name+" from "+tn+"!",type:"bad"});
+      g.log.push({msg:an+" pilfered a Supply from "+tn+"!",type:"bad"});
     }else{g.log.push({msg:tn+" has nothing!",type:"warning"});}
   }else if(cardName==="Pickpocket"){
     if(g.players[targetIdx].actions.length>0){
@@ -472,10 +517,10 @@ window.useBoomerang=async function(newTargetIdx){
       targetName:newTarget,
       canBoomerang:newCanBoomerang,
       canDecoy:newCanDecoy,
-      expiresAt:Date.now()+5000,
+      expiresAt:Date.now()+10000,
       resolved:false
     };
-    g.log.push({msg:newTarget+" has 5 seconds to react...",type:"event"});
+    g.log.push({msg:newTarget+" has 10 seconds to react...",type:"event"});
   }else{
     // Resolve on new target
     resolveTargetedEffect(g,pr.cardName,pr.attackerIdx,newTargetIdx);
@@ -524,13 +569,13 @@ window.checkReactionTimeout=function(){
       g.pendingReaction=null;
       g.version=Date.now();await DB.set(S.code,g);set({game:g});
     }
-  },5500);
+  },10500);
 };
 
 window.discardSabo=async function(si){
   var g=await freshGame(),i=S.myIdx;
   var d=g.players[i].supply.splice(si,1)[0];g.discardSupply.push(d);
-  g.log.push({msg:S.name+" discarded "+d.name+" from sabotage.",type:"bad"});
+  g.log.push({msg:S.name+" discarded a Supply from sabotage.",type:"bad"});
   g.pendingSabotage=null;g.version=Date.now();await DB.set(S.code,g);set({game:g});
 };
 window.endTurn=async function(){
@@ -551,6 +596,7 @@ window.endTurn=async function(){
       g.discardEvent.push(evt);
       g.log.push({msg:"=== EVENT: "+evt.name+" "+evt.emoji+" ===",type:"event"});
       g.log.push({msg:evt.desc,type:"event"});
+      showEventAnimation(evt);
       resolveEvent(g, evt, -1); // -1 means no immunity
     }else{
       g.log.push({msg:"=== No Events left in deck! ===",type:"warning"});
@@ -579,6 +625,7 @@ window.endTurn=async function(){
 
 // ═══ EVENT RESOLUTION ═══
 function resolveEvent(g, evt, immuneIdx){
+  if(!g._forcedLoss)g._forcedLoss={};
   var effect=evt.effect;
   if(typeof effect==="number"){
     // Simple +/- supply
@@ -594,6 +641,8 @@ function resolveEvent(g, evt, immuneIdx){
           toLose=Math.min(toLose,maxLoss);
           if(toLose===0){g.log.push({msg:g.players[p].name+" protected by first cycle rules!",type:"system"});continue;}
         }
+        // Track if forced below 0 (asked to lose more than they have)
+        if(toLose>g.players[p].supply.length)g._forcedLoss[p]=true;
         toLose=Math.min(toLose,g.players[p].supply.length);
         for(var l=0;l<toLose;l++){var lost=g.players[p].supply.pop();g.discardSupply.push(lost);}
         if(toLose>0)g.log.push({msg:g.players[p].name+" lost "+toLose+" supply!",type:"bad"});
@@ -612,6 +661,7 @@ function resolveEvent(g, evt, immuneIdx){
         if(Math.random()<0.5){losses++;}else{break;}
       }
       if(g.firstCycle){var maxL=Math.max(0,g.players[p2].supply.length-1);losses=Math.min(losses,maxL);}
+      if(losses>g.players[p2].supply.length)g._forcedLoss[p2]=true;
       losses=Math.min(losses,g.players[p2].supply.length);
       for(var fl=0;fl<losses;fl++){var fLost=g.players[p2].supply.pop();g.discardSupply.push(fLost);}
       g.log.push({msg:g.players[p2].name+" flipped "+losses+" heads — lost "+losses+" supply!",type:losses>0?"bad":"system"});
@@ -636,8 +686,10 @@ function resolveEvent(g, evt, immuneIdx){
       if(g.players[pg2].eliminated||pg2===immuneIdx)continue;
       if(g.players[pg2].sheltered){g.log.push({msg:g.players[pg2].name+" was protected by Shelter!",type:"good"});continue;}
       if(g.players[pg2].supply.length===maxSup){
-        var gLose=Math.min(2,g.players[pg2].supply.length);
+        var gLose=2;
         if(g.firstCycle){gLose=Math.min(gLose,Math.max(0,g.players[pg2].supply.length-1));}
+        if(gLose>g.players[pg2].supply.length)g._forcedLoss[pg2]=true;
+        gLose=Math.min(gLose,g.players[pg2].supply.length);
         for(var gl=0;gl<gLose;gl++){var gLost=g.players[pg2].supply.pop();g.discardSupply.push(gLost);}
         if(gLose>0)g.log.push({msg:g.players[pg2].name+" hit by Jealousy Tax! Lost "+gLose+" supply!",type:"bad"});
       }
@@ -665,39 +717,99 @@ function resolveEvent(g, evt, immuneIdx){
     for(var pm4=0;pm4<g.players.length;pm4++){
       if(g.players[pm4].eliminated||pm4===immuneIdx)continue;
       if(g.players[pm4].sheltered){g.log.push({msg:g.players[pm4].name+" was protected by Shelter!",type:"good"});continue;}
+      // Meltdown forces loss — anyone at 0 was forced below their original count
+      if(g.players[pm4].supply.length===0)g._forcedLoss[pm4]=true;
       g.log.push({msg:g.players[pm4].name+" now has "+g.players[pm4].supply.length+" supply.",type:g.players[pm4].supply.length===0?"bad":"system"});
     }
   }
 }
 
 // ═══ ELIMINATION CHECK ═══
+// Players are only eliminated if an event FORCED them below 0 (i.e., they had supply
+// taken when they couldn't afford it). Being at exactly 0 is NOT elimination.
+// We track this via g._forcedLoss[playerIdx] set during resolveEvent.
 function checkEliminations(g){
-  // A player is eliminated if they have 0 supply AND are forced to lose
-  // Since events just resolved, anyone at 0 who lost supply this event is now at risk
-  // For simplicity: after an event, anyone at 0 supply who isn't sheltered gets a "pending elimination"
-  // They can play Last Resort if they have one
+  var forced=g._forcedLoss||{};
   for(var p=0;p<g.players.length;p++){
     if(g.players[p].eliminated)continue;
-    if(g.players[p].supply.length===0&&!g.players[p].sheltered){
-      // Check for Last Resort
+    if(g.players[p].supply.length===0&&forced[p]){
+      // This player was forced to lose supply they didn't have — elimination candidate
       var lrIdx=g.players[p].actions.findIndex(function(a){return a.name==="Last Resort";});
       if(lrIdx>=0){
-        // Auto-play Last Resort
         g.discardAction.push(g.players[p].actions.splice(lrIdx,1)[0]);
-        g.log.push({msg:g.players[p].name+" used Last Resort to survive at 0 supply!",type:"good"});
+        g.log.push({msg:g.players[p].name+" used Last Resort to survive!",type:"good"});
       }else{
-        // Check if they were actually forced to lose (had supply before event)
-        // Since we can't track pre-event state easily, we eliminate anyone at 0 after a damaging event
-        // This is slightly simplified but works for gameplay
         g.players[p].eliminated=true;
-        g.log.push({msg:g.players[p].name+" has been ELIMINATED! No supplies and no Last Resort!",type:"bad"});
+        g.log.push({msg:g.players[p].name+" has been ELIMINATED! Forced to lose more than they had!",type:"bad"});
       }
     }
   }
+  delete g._forcedLoss;
 }
 window.doCreate=function(){S.name=document.getElementById("ni").value;createRoom();};
 window.doJoin=function(){S.name=document.getElementById("ni").value;S.code=document.getElementById("ci").value;joinRoom();};
 window.saveFirebase=function(){var v=document.getElementById("fbi").value.trim();if(v&&v.indexOf("https://")===0){FIREBASE_URL=v;localStorage.setItem("rr_firebase_url",v);useLocal=false;set({screen:"menu"});}else{alert("Enter valid URL starting with https://");}};
+
+// ═══ OVERLAY RENDERERS ═══
+function renderDeckList(){
+  var h='<div class="overlay" onclick="event.target===this&&set({showOverlay:null})"><div class="overlay-content">';
+  h+='<div class="overlay-title"><span class="g">Deck</span> List</div>';
+  // Supply cards
+  h+='<div class="section-label" style="color:var(--green)">&#128230; Supply Cards</div><div class="card-grid">';
+  SUPPLY.forEach(function(s){h+='<div class="card card-s" style="min-width:100px"><span class="emoji">'+s.emoji+'</span><span class="cname">'+esc(s.name)+'</span><span class="cdesc">x'+s.count+(s.value===2?' (worth 2)':'')+'</span></div>';});
+  h+='</div>';
+  // Action cards
+  h+='<div class="section-label" style="color:var(--amber)">&#127183; Action Cards</div><div class="card-grid">';
+  ACTIONS.forEach(function(a){var dash=a.type==="reaction"?"card-dash":"";h+='<div class="card card-a '+dash+'" style="min-width:100px"><span class="emoji">'+a.emoji+'</span><span class="cname">'+esc(a.name)+'</span><span class="cdesc">'+esc(a.desc)+'</span><span class="cdesc" style="color:var(--text)">x'+a.count+'</span>'+(a.type==="reaction"?'<span class="badge badge-red" style="margin-top:3px;font-size:8px">REACT</span>':'')+(a.type==="special"?'<span class="badge badge-blue" style="margin-top:3px;font-size:8px">SPECIAL</span>':'')+'</div>';});
+  h+='</div>';
+  // Event cards
+  h+='<div class="section-label" style="color:var(--red)">&#9889; Event Cards</div><div class="card-grid">';
+  EVENTS.forEach(function(e){h+='<div class="card" style="background:#1E1E1E;border-color:#444;min-width:100px"><span class="emoji">'+e.emoji+'</span><span class="cname">'+esc(e.name)+'</span><span class="cdesc">'+esc(e.desc)+'</span><span class="cdesc" style="color:var(--text)">x'+e.count+'</span></div>';});
+  h+='</div>';
+  h+='<div style="text-align:center;margin-top:16px"><button class="btn btn-dim" style="width:auto;padding:10px 32px" onclick="set({showOverlay:null})">Close</button></div>';
+  h+='</div></div>';
+  return h;
+}
+
+function renderRules(){
+  var h='<div class="overlay" onclick="event.target===this&&set({showOverlay:null})"><div class="overlay-content">';
+  h+='<div class="overlay-title"><span class="g">Ration</span> <span class="r">Ruckus!</span> Rules</div>';
+  h+='<div class="rules-section"><h3>&#127919; Goal</h3><p>Be the last player standing! Collect Supply cards to survive and use Action cards to outplay your opponents.</p></div>';
+  h+='<div class="rules-section"><h3>&#127922; Setup</h3><ul><li>2-8 players. Each gets 3 Supply + 4 Action cards (2 Supply + 5 Action if 5+ players).</li><li>One player creates a room and shares the code.</li></ul></div>';
+  h+='<div class="rules-section"><h3>&#128260; Turn Flow</h3><ul><li><b>Draw Phase:</b> Draw 1 Action card from the deck.</li><li><b>Play Phase:</b> Play up to 3 Action cards (or pass).</li><li><b>End Turn:</b> Pass to the next player.</li></ul></div>';
+  h+='<div class="rules-section"><h3>&#9889; Events</h3><p>After every player has taken a turn (1 full cycle), an Event card is drawn that affects all players. Events can cause supply loss, grant bonuses, or create chaos!</p></div>';
+  h+='<div class="rules-section"><h3>&#127183; Card Types</h3><ul><li><b style="color:var(--green)">Supply Cards:</b> Your life total. Lose all and get forced below 0 = eliminated.</li><li><b style="color:var(--amber)">Action Cards:</b> Play on your turn. Core actions (Scrounge, Hustle), offensive (Sabotage, Pilfer, Pickpocket, Slow Down), and specials (Foresight, Collateral Damage, etc.).</li><li><b style="color:var(--red)">Reaction Cards</b> (dashed border): <b>Boomerang</b> redirects an attack to any player (including the caster). <b>Decoy Stash</b> absorbs supply loss from player actions. <b>Last Resort</b> auto-plays to prevent elimination.</li><li><b style="color:var(--blue)">Shelter:</b> Play on your turn to block the next Event for you. Expires after the event.</li></ul></div>';
+  h+='<div class="rules-section"><h3>&#9760; Elimination</h3><ul><li>You are only eliminated if an event or effect forces you to lose <b>more supply than you have</b>.</li><li>Being at exactly 0 supply is dangerous but NOT elimination.</li><li>If you have a Last Resort card, it auto-plays to save you once.</li></ul></div>';
+  h+='<div class="rules-section"><h3>&#128176; First Cycle Protection</h3><p>During the first cycle, no player can drop below 1 Supply from events.</p></div>';
+  h+='<div style="text-align:center;margin-top:16px"><button class="btn btn-dim" style="width:auto;padding:10px 32px" onclick="set({showOverlay:null})">Close</button></div>';
+  h+='</div></div>';
+  return h;
+}
+
+function showEventAnimation(evt){
+  S.eventAnim=evt;
+  render();
+  setTimeout(function(){S.eventAnim=null;render();},2500);
+}
+
+function renderEventAnim(){
+  if(!S.eventAnim)return'';
+  var e=S.eventAnim;
+  var severity=typeof e.effect==="number"&&e.effect<0?"var(--red)":typeof e.effect==="number"&&e.effect>0?"var(--green)":"var(--amber)";
+  if(e.effect==="meltdown")severity="var(--red)";
+  return'<div class="event-overlay"><div class="event-card-big" style="background:var(--surface);border-color:'+severity+'"><span class="emoji">'+e.emoji+'</span><span class="cname" style="color:'+severity+'">'+esc(e.name)+'</span><span class="cdesc">'+esc(e.desc)+'</span></div></div>';
+}
+
+// ═══ REPLAY SYSTEM ═══
+window.playAgain=async function(){
+  var g=await freshGame();
+  // Reset to lobby with same players (re-read names from finished game)
+  var lobby={status:"lobby",host:g.players[0].name,players:g.players.map(function(p,i){return{name:p.name,id:i};}),created:Date.now(),version:Date.now()};
+  await DB.set(S.code,lobby);
+  if(S.poll)clearInterval(S.poll);
+  set({screen:"lobby",game:lobby,err:"",pTarget:null,showOverlay:null,eventAnim:null});
+  poll(S.code,S.name.trim());
+};
 
 function render(){
   if(S.screen==="menu")renderMenu();
@@ -705,10 +817,14 @@ function render(){
   else if(S.screen==="lobby")renderLobby();
   else if(S.screen==="game")renderGame();
   else if(S.screen==="setup")renderSetup();
+  // Append overlays on top
+  if(S.showOverlay==="decklist")$.innerHTML+=renderDeckList();
+  if(S.showOverlay==="rules")$.innerHTML+=renderRules();
+  if(S.eventAnim)$.innerHTML+=renderEventAnim();
 }
 
 function renderMenu(){
-  $.innerHTML='<div style="margin-top:60px"><div class="title" style="font-size:36px"><span class="g">Ration</span> <span class="r">Ruckus!</span></div><p class="sub" style="margin-bottom:40px">Hoard. Survive. Outlast.</p><div class="form-stack"><button class="btn btn-amber" onclick="set({screen:\'create\'})">Create Game</button><button class="btn btn-green" onclick="set({screen:\'join\'})">Join Game</button><button class="btn btn-dim" style="font-size:12px" onclick="set({screen:\'setup\'})">'+(FIREBASE_URL?"&#10004; Firebase Connected":"&#9881; Setup Firebase (for online play)")+'</button>'+(FIREBASE_URL?'':'<p class="note">Without Firebase, multiplayer only works in 2 browser tabs on same device.</p>')+'<p class="note">Step 4 Build &mdash; Fully playable!<br>All cards, events, elimination &amp; win condition active.<br>Trade-ins coming soon.</p></div></div>';
+  $.innerHTML='<div style="margin-top:60px"><div class="title" style="font-size:36px"><span class="g">Ration</span> <span class="r">Ruckus!</span></div><p class="sub" style="margin-bottom:40px">Hoard. Survive. Outlast.</p><div class="form-stack"><button class="btn btn-amber" onclick="set({screen:\'create\'})">Create Game</button><button class="btn btn-green" onclick="set({screen:\'join\'})">Join Game</button><button class="btn btn-dim" onclick="set({showOverlay:\'decklist\'})">&#127183; View All Cards</button><button class="btn btn-dim" onclick="set({showOverlay:\'rules\'})">&#128214; Rules</button><button class="btn btn-dim" style="font-size:12px" onclick="set({screen:\'setup\'})">'+(FIREBASE_URL?"&#10004; Firebase Connected":"&#9881; Setup Firebase (for online play)")+'</button>'+(FIREBASE_URL?'':'<p class="note">Without Firebase, multiplayer only works in 2 browser tabs on same device.</p>')+'<p class="note">Step 4 Build &mdash; Fully playable!<br>All cards, events, elimination &amp; win condition active.<br>Trade-ins coming soon.</p></div></div>';
 }
 
 function renderForm(){
@@ -729,7 +845,8 @@ function renderGame(){
   var saboMe=g.pendingSabotage&&g.pendingSabotage.targetIdx===S.myIdx;
   var h='';
   h+='<div class="header-bar"><div><div style="font-size:20px;font-weight:800"><span class="g">Ration</span> <span class="r">Ruckus!</span></div><div style="font-size:11px;color:var(--text-dim)">Room: '+S.code+' &bull; Cycle '+g.cycle+'</div></div><div style="text-align:right"><div class="turn-ind">'+(myTurn?"YOUR TURN":esc(g.players[g.currentPlayer].name)+"'s turn")+'</div><div style="font-size:11px;color:var(--text-dim)">'+(myTurn&&g.turnPhase==="draw"?"Draw an Action card":myTurn&&g.turnPhase==="play"?"Actions: "+g.actionsPlayed+"/"+g.maxActions:"Waiting...")+'</div></div></div>';
-  if(winner)h+='<div class="panel" style="text-align:center;border:2px solid var(--amber)"><div style="font-size:40px;margin-bottom:8px">&#127942;</div><div style="font-size:22px;font-weight:800;color:var(--amber)">'+esc(winner.name)+' Wins!</div><p style="color:var(--text-dim);font-size:13px">Last critter standing!</p></div>';
+  if(winner)h+='<div class="panel" style="text-align:center;border:2px solid var(--amber)"><div style="font-size:40px;margin-bottom:8px">&#127942;</div><div style="font-size:22px;font-weight:800;color:var(--amber)">'+esc(winner.name)+' Wins!</div><p style="color:var(--text-dim);font-size:13px;margin-bottom:12px">Last critter standing!</p><button class="btn btn-amber" style="width:auto;padding:10px 32px" onclick="playAgain()">&#128260; Play Again</button></div>';
+  if(g.status==="finished"&&!winner)h+='<div class="panel" style="text-align:center;border:2px solid var(--red)"><div style="font-size:30px;margin-bottom:6px">&#9760;</div><p style="font-weight:700;color:var(--red);margin-bottom:12px">Everyone eliminated! No winner!</p><button class="btn btn-amber" style="width:auto;padding:10px 32px" onclick="playAgain()">&#128260; Play Again</button></div>';
   if(saboMe){var sc=me.supply.map(function(s,i){return'<div class="card card-s card-play" onclick="discardSabo('+i+')"><span class="emoji">'+s.emoji+'</span><span class="cname">'+esc(s.name)+'</span></div>';}).join("");h+='<div class="panel" style="border:2px solid var(--red)"><p style="font-size:14px;font-weight:700;color:var(--red);margin-bottom:8px">&#128163; Sabotaged by '+esc(g.pendingSabotage.by)+'! Choose a Supply to discard:</p><div class="cards-row">'+sc+'</div></div>';}
   // Reaction window UI
   var pr=g.pendingReaction;
@@ -740,7 +857,7 @@ function renderGame(){
       // I'm the target — show reaction options
       var rbtns='';
       if(pr.canBoomerang){
-        var bTargets=g.players.map(function(p,i){if(i===S.myIdx||i===pr.attackerIdx||p.eliminated)return'';return'<button class="btn-small" style="background:var(--amber);color:#000" onclick="useBoomerang('+i+')">'+esc(p.name)+'</button>';}).join("");
+        var bTargets=g.players.map(function(p,i){if(i===S.myIdx||p.eliminated)return'';return'<button class="btn-small" style="background:var(--amber);color:#000" onclick="useBoomerang('+i+')">'+esc(p.name)+(i===pr.attackerIdx?' (caster)':'')+'</button>';}).join("");
         rbtns+='<div style="margin-bottom:8px"><p style="font-size:12px;color:var(--amber);margin-bottom:4px">&#x1FA83; Boomerang to:</p>'+bTargets+'</div>';
       }
       if(pr.canDecoy){
@@ -756,7 +873,11 @@ function renderGame(){
   var chips=g.players.map(function(p,i){var cls=p.eliminated?"chip-dead":i===g.currentPlayer?"chip-active":"";return'<div class="chip '+cls+'"><span style="font-weight:700">'+esc(p.name)+'</span>'+(i===S.myIdx?'<span style="color:var(--blue)"> (you)</span>':'')+'<span style="color:var(--green);margin-left:6px">'+(p.eliminated?'&#9760;':'&#128230;'+p.supply.length)+'</span>'+(p.eliminated?'':'<span style="color:var(--amber);margin-left:4px">&#127183;'+p.actions.length+'</span>')+(p.slowedDown&&!p.eliminated?'<span style="margin-left:4px">&#128012;</span>':'')+(p.sheltered&&!p.eliminated?'<span style="margin-left:4px">&#x1F6D6;</span>':'')+'</div>';}).join("");
   h+='<div class="panel"><div class="label" style="color:var(--text-dim)">PLAYERS</div><div class="players-bar">'+chips+'</div></div>';
   if(S.pTarget){
-    if(S.pTarget.needTwo){
+    if(S.pTarget.twoPlayer){
+      // 2-player Collateral Damage confirmation
+      var stName=g.players[S.pTarget.soloTarget].name;
+      h+='<div class="panel" style="border:2px solid var(--red)"><p style="font-size:14px;font-weight:700;color:var(--red);margin-bottom:4px">&#x1F9E8; Collateral Damage &mdash; 2 Player Mode</p><p style="font-size:12px;color:var(--text-dim);margin-bottom:8px">You lose 1 Supply, '+esc(stName)+' loses 2 Supply.</p><div><button class="btn-small" style="background:var(--red);color:#fff" onclick="execCollateral2P()">Confirm</button> <button class="btn-small" style="background:var(--surface-light);color:var(--text-dim)" onclick="set({pTarget:null})">Cancel</button></div></div>';
+    } else if(S.pTarget.needTwo){
       // Collateral Damage — pick 2 targets
       var sel=S.pTarget.selected||[];
       var ctb=g.players.map(function(p,i){if(i===S.myIdx||p.eliminated)return'';var isSel=sel.indexOf(i)>=0;return'<button class="btn-small" style="background:'+(isSel?'var(--red)':'var(--amber)')+';color:#000" onclick="collateralPick('+i+')">'+esc(p.name)+(isSel?' &#10003;':'')+'</button>';}).join("");
@@ -788,6 +909,7 @@ function renderGame(){
   var logs=(g.log||[]).slice(-20).map(function(e){return'<div class="log-entry log-'+e.type+'">'+esc(e.msg)+'</div>';}).join("");
   h+='<div class="panel"><div class="label" style="color:var(--text-dim)">GAME LOG</div><div class="log-box" id="lb">'+logs+'</div></div>';
   h+='<div class="deck-counts"><span>&#128230; Supply: '+(g.supplyDeck?g.supplyDeck.length:0)+'</span><span>&#127183; Action: '+(g.actionDeck?g.actionDeck.length:0)+'</span><span>&#9889; Event: '+(g.eventDeck?g.eventDeck.length:0)+'</span></div>';
+  h+='<div style="display:flex;gap:8px;justify-content:center;margin-top:8px"><button class="btn-small" style="background:var(--surface-light);color:var(--text-dim)" onclick="set({showOverlay:\'decklist\'})">&#127183; Cards</button><button class="btn-small" style="background:var(--surface-light);color:var(--text-dim)" onclick="set({showOverlay:\'rules\'})">&#128214; Rules</button></div>';
   $.innerHTML=h;
   var lb=document.getElementById("lb");if(lb)lb.scrollTop=lb.scrollHeight;
 }

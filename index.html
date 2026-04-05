@@ -66,8 +66,8 @@
 <body>
 <div id="app">Loading...</div>
 <script>
-var FIREBASE_URL = localStorage.getItem("rr_firebase_url") || "";
-var useLocal = !FIREBASE_URL;
+var FIREBASE_URL = "https://ration-ruckus-default-rtdb.firebaseio.com";
+var useLocal = false;
 
 var DB = {
   get: async function(k) {

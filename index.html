@@ -162,25 +162,29 @@ window.drawAction=async function(){
   g.version=Date.now();await DB.set(S.code,g);set({game:g});
 };
 
-window.playCard=function(ci){
-  var g=S.game;
-  var me=g.players[S.myIdx],card=me.actions[ci];
-  if(!card||CORE.indexOf(card.name)<0||S.game.actionsPlayed>=S.game.maxActions)return;
-  if(card.target==="other"){set({pTarget:{ci:ci,card:card}});return;}
-  if(card.target==="multi"){
-    var othersAlive=S.game.players.filter(function(p,idx){return idx!==S.myIdx&&!p.eliminated;}).length;
-    if(othersAlive<2){
-      // Not enough targets — can't play
-      return;
+window.playCard=async function(ci){
+  try{
+    console.log("playCard called with ci="+ci);
+    var g=await freshGame();
+    console.log("freshGame returned, actionsPlayed="+g.actionsPlayed+", maxActions="+g.maxActions+", turnPhase="+g.turnPhase);
+    var me=g.players[S.myIdx],card=me.actions[ci];
+    console.log("card=",card?card.name:"UNDEFINED","CORE check=",card?CORE.indexOf(card.name):-1);
+    if(!card||CORE.indexOf(card.name)<0||g.actionsPlayed>=g.maxActions){console.log("BLOCKED: card check failed");return;}
+    if(card.target==="other"){set({pTarget:{ci:ci,card:card}});return;}
+    if(card.target==="multi"){
+      var othersAlive=g.players.filter(function(p,idx){return idx!==S.myIdx&&!p.eliminated;}).length;
+      if(othersAlive<2){return;}
+      set({pTarget:{ci:ci,card:card,needTwo:true,selected:[]}});return;
     }
-    set({pTarget:{ci:ci,card:card,needTwo:true,selected:[]}});return;
-  }
-  if(card.name==="Scrounge")window.execScrounge(ci);
-  else if(card.name==="Hustle")window.execHustle(ci);
-  else if(card.name==="Shelter")window.execShelter(ci);
-  else if(card.name==="Foresight")window.execForesight(ci);
-  else if(card.name==="Recurring Nightmare")window.execRecurringNightmare(ci);
-  else if(card.name==="Scavenger")window.execScavenger(ci);
+    console.log("executing "+card.name);
+    if(card.name==="Scrounge")window.execScrounge(ci);
+    else if(card.name==="Hustle")window.execHustle(ci);
+    else if(card.name==="Shelter")window.execShelter(ci);
+    else if(card.name==="Foresight")window.execForesight(ci);
+    else if(card.name==="Recurring Nightmare")window.execRecurringNightmare(ci);
+    else if(card.name==="Scavenger")window.execScavenger(ci);
+    else{console.log("NO HANDLER for "+card.name);}
+  }catch(e){console.error("playCard error:",e);}
 };
 
 window.execShelter=async function(ci){

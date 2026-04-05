@@ -147,7 +147,7 @@ function hasPendingState(g){
 window.drawAction=async function(){
   var fresh=await DB.get(S.code);
   var g=fresh?JSON.parse(JSON.stringify(fresh)):JSON.parse(JSON.stringify(S.game));
-  if(hasPendingState(g)){set({game:g});return;} // Block during pending states
+  if(g.pendingReaction){set({game:g});return;} // Only block on active reaction timer
   var i=S.myIdx;
   if(g.actionDeck.length>0){g.players[i].actions.push(g.actionDeck.shift());g.log.push({msg:S.name+" drew an Action card.",type:"system"});}
   else{g.log.push({msg:"Action deck empty!",type:"warning"});}
@@ -157,7 +157,6 @@ window.drawAction=async function(){
 
 window.playCard=function(ci){
   var g=S.game;
-  if(hasPendingState(g))return; // Block during pending states
   var me=g.players[S.myIdx],card=me.actions[ci];
   if(!card||CORE.indexOf(card.name)<0||S.game.actionsPlayed>=S.game.maxActions)return;
   if(card.target==="other"){set({pTarget:{ci:ci,card:card}});return;}
@@ -520,7 +519,7 @@ window.endTurn=async function(){
   // Fetch fresh state to avoid stale turnsThisCycle from polling lag
   var fresh=await DB.get(S.code);
   var g=fresh?JSON.parse(JSON.stringify(fresh)):JSON.parse(JSON.stringify(S.game));
-  if(hasPendingState(g)){set({game:g});return;} // Block during pending states
+  if(g.pendingReaction){set({game:g});return;} // Only block on active reaction timer
   var alive=g.players.filter(function(p){return!p.eliminated;});
   g.log.push({msg:S.name+" ended their turn.",type:"system"});g.turnsThisCycle++;g.actionsPlayed=0;g.turnPhase="draw";
   var nx=(g.currentPlayer+1)%g.players.length,lp=0;
@@ -767,8 +766,8 @@ function renderGame(){
     h+='<div class="panel" style="border:1px solid var(--red)"><p style="font-size:13px;color:var(--red)">&#x1F608; '+esc(g.players[g.pendingNightmare.playerIdx].name)+' is choosing a Recurring Nightmare...</p></div>';
   }
   if(me&&!me.eliminated){var scs=me.supply.length===0?'<p style="font-size:12px;color:var(--text-dim)">No supplies! You are in danger!</p>':me.supply.map(function(s){return'<div class="card card-s"><span class="emoji">'+s.emoji+'</span><span class="cname">'+esc(s.name)+'</span>'+(s.value===2?'<span class="badge badge-amber" style="margin-top:3px;font-size:9px">x2</span>':'')+'</div>';}).join("");h+='<div class="panel"><div class="label" style="color:var(--green)">YOUR SUPPLIES ('+me.supply.length+')</div><div class="cards-row">'+scs+'</div></div>';}
-  if(me&&!me.eliminated){var hasPending=hasPendingState(g);var canPlay=myTurn&&g.turnPhase==="play"&&g.actionsPlayed<g.maxActions&&!hasPending;var acs=me.actions.length===0?'<p style="font-size:12px;color:var(--text-dim)">No actions!</p>':me.actions.map(function(a,i){var ok=canPlay&&CORE.indexOf(a.name)>=0;var dash=a.type==="reaction"?"card-dash":"";return'<div class="card card-a '+dash+' '+(ok?"card-play":"card-dim")+'" '+(ok?'onclick="playCard('+i+')"':'')+'><span class="emoji">'+a.emoji+'</span><span class="cname">'+esc(a.name)+'</span><span class="cdesc">'+esc(a.desc)+'</span>'+(a.type==="reaction"?'<span class="badge badge-red" style="margin-top:3px;font-size:8px">REACT</span>':'')+(a.type==="special"?'<span class="badge badge-blue" style="margin-top:3px;font-size:8px">SPECIAL</span>':'')+'</div>';}).join("");h+='<div class="panel"><div class="label" style="color:var(--amber)">YOUR ACTIONS ('+me.actions.length+')'+(canPlay?' <span style="color:var(--text-dim);font-weight:400">&mdash; tap to play ('+g.actionsPlayed+'/'+g.maxActions+')</span>':'')+(hasPending&&myTurn?' <span style="color:var(--red);font-weight:400">&mdash; waiting for pending action to resolve</span>':'')+'</div><div class="cards-row">'+acs+'</div></div>';}
-  if(myTurn&&!winner&&me&&!me.eliminated&&!hasPendingState(g)){if(g.turnPhase==="draw")h+='<button class="btn btn-amber" onclick="drawAction()">&#127183; Draw Action Card</button>';else h+='<button class="btn btn-green" onclick="endTurn()">&#10003; End Turn '+(g.actionsPlayed>0?'('+g.actionsPlayed+' played)':'(pass)')+'</button>';}
+  if(me&&!me.eliminated){var hasPending=!!g.pendingReaction;var canPlay=myTurn&&g.turnPhase==="play"&&g.actionsPlayed<g.maxActions&&!hasPending;var acs=me.actions.length===0?'<p style="font-size:12px;color:var(--text-dim)">No actions!</p>':me.actions.map(function(a,i){var ok=canPlay&&CORE.indexOf(a.name)>=0;var dash=a.type==="reaction"?"card-dash":"";return'<div class="card card-a '+dash+' '+(ok?"card-play":"card-dim")+'" '+(ok?'onclick="playCard('+i+')"':'')+'><span class="emoji">'+a.emoji+'</span><span class="cname">'+esc(a.name)+'</span><span class="cdesc">'+esc(a.desc)+'</span>'+(a.type==="reaction"?'<span class="badge badge-red" style="margin-top:3px;font-size:8px">REACT</span>':'')+(a.type==="special"?'<span class="badge badge-blue" style="margin-top:3px;font-size:8px">SPECIAL</span>':'')+'</div>';}).join("");h+='<div class="panel"><div class="label" style="color:var(--amber)">YOUR ACTIONS ('+me.actions.length+')'+(canPlay?' <span style="color:var(--text-dim);font-weight:400">&mdash; tap to play ('+g.actionsPlayed+'/'+g.maxActions+')</span>':'')+(hasPending&&myTurn?' <span style="color:var(--red);font-weight:400">&mdash; waiting for reaction to resolve</span>':'')+'</div><div class="cards-row">'+acs+'</div></div>';}
+  if(myTurn&&!winner&&me&&!me.eliminated&&!g.pendingReaction){if(g.turnPhase==="draw")h+='<button class="btn btn-amber" onclick="drawAction()">&#127183; Draw Action Card</button>';else h+='<button class="btn btn-green" onclick="endTurn()">&#10003; End Turn '+(g.actionsPlayed>0?'('+g.actionsPlayed+' played)':'(pass)')+'</button>';}
   if(me&&me.eliminated)h+='<div class="panel" style="text-align:center;border:2px solid var(--red)"><div style="font-size:30px;margin-bottom:6px">&#9760;</div><p style="font-weight:700;color:var(--red)">You have been eliminated!</p><p style="font-size:12px;color:var(--text-dim)">Spectating...</p></div>';
   var logs=(g.log||[]).slice(-20).map(function(e){return'<div class="log-entry log-'+e.type+'">'+esc(e.msg)+'</div>';}).join("");
   h+='<div class="panel"><div class="label" style="color:var(--text-dim)">GAME LOG</div><div class="log-box" id="lb">'+logs+'</div></div>';

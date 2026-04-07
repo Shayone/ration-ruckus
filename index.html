@@ -110,7 +110,7 @@ var DB = {
   }
 };
 
-var SUPPLY=[{name:"Snack Stash",emoji:"\u{1F355}",count:4,value:1},{name:"Cozy Blanket",emoji:"\u{1F9E3}",count:4,value:1},{name:"Duct Tape",emoji:"\u{1FA79}",count:4,value:1},{name:"Battery Pack",emoji:"\u{1F50B}",count:4,value:1},{name:"First Aid Kit",emoji:"\u{1FA7A}",count:4,value:1},{name:"Bottled Water",emoji:"\u{1F4A7}",count:4,value:1},{name:"Canned Goods",emoji:"\u{1F96B}",count:4,value:1},{name:"Jackpot Crate",emoji:"\u{1F4E6}",count:2,value:2}];
+var SUPPLY=[{name:"Acorn Stash",emoji:"\u{1F330}",count:4,value:1},{name:"Fish Scraps",emoji:"\u{1F41F}",count:4,value:1},{name:"Berry Haul",emoji:"\u{1FAD0}",count:4,value:1},{name:"Shiny Trinket",emoji:"\u{2728}",count:4,value:1},{name:"Honey Jar",emoji:"\u{1F36F}",count:4,value:1},{name:"Bird Egg",emoji:"\u{1F95A}",count:4,value:1},{name:"Mushroom Find",emoji:"\u{1F344}",count:4,value:1},{name:"Dumpster Jackpot",emoji:"\u{1F5D1}",count:2,value:2}];
 var ACTIONS=[{name:"Scrounge",emoji:"\u{1F5D1}",count:10,type:"core",target:"self",desc:"Dig through the trash. Draw 1 Supply."},{name:"Hustle",emoji:"\u{1F4A8}",count:6,type:"core",target:"self",desc:"Quick paws! Draw 2 Action cards."},{name:"Sabotage",emoji:"\u{1F4A3}",count:5,type:"offensive",target:"other",desc:"Trash their stash! Target discards 1 Supply."},{name:"Pilfer",emoji:"\u{1F99D}",count:4,type:"offensive",target:"other",desc:"Sneaky paws! Steal 1 random Supply."},{name:"Pickpocket",emoji:"\u{1FAF3}",count:4,type:"offensive",target:"other",desc:"Nimble fingers! Steal 1 random Action."},{name:"Slow Down",emoji:"\u{1F43E}",count:6,type:"offensive",target:"other",desc:"Set a trap! Target plays max 1 Action next turn."},{name:"Boomerang",emoji:"\u{1FA83}",count:6,type:"reaction",target:"react",desc:"Not me! Redirect a targeted card to anyone."},{name:"Decoy Stash",emoji:"\u{1FA86}",count:5,type:"reaction",target:"react",desc:"Block a player's action that would cost you Supply. Not for Events."},{name:"Shelter",emoji:"\u{1F3DA}",count:6,type:"special",target:"self",desc:"Hunker in the den. Blocks the next Event. Expires after event."},{name:"Last Resort",emoji:"\u{1FA82}",count:2,type:"reaction",target:"react",desc:"Not today! Survive when forced below 0 Supply."},{name:"Foresight",emoji:"\u{1F441}",count:3,type:"special",target:"self",desc:"Peek top 3 Events. Pick which comes next."},{name:"Collateral Damage",emoji:"\u{1F9E8}",count:2,type:"special",target:"multi",desc:"Knock over the bins! You + 2 others each lose 1 Supply."},{name:"Recurring Nightmare",emoji:"\u{1F608}",count:2,type:"special",target:"others",desc:"Replay a discarded Event. You are immune."},{name:"Scavenger",emoji:"\u{1F99D}",count:2,type:"special",target:"self",desc:"Loot the fallen! Draw 1 Supply + 1 Action per eliminated player."},{name:"Coin Toss",emoji:"\u{1FA99}",count:3,type:"special",target:"other",desc:"Feeling lucky? Heads: you gain, they lose. Tails: opposite."}];
 var EVENTS=[{name:"Raccoon Raid",emoji:"\u{1F629}",count:8,desc:"Rival raccoons raid everyone! Each player loses 1 Supply.",effect:-1},{name:"Dumpster Fire",emoji:"\u{1F525}",count:2,desc:"The dumpster is ablaze! Each player loses 2 Supply.",effect:-2},{name:"Lucky Dumpster",emoji:"\u{1F389}",count:3,desc:"Jackpot haul tonight! Each player gains 1 Supply.",effect:1},{name:"Spin the Bottle",emoji:"\u{1FA99}",count:2,desc:"Flip coins, lose per Heads (max 3).",effect:"spin"},{name:"Helping Paw",emoji:"\u{1F43E}",count:2,desc:"Pack looks out for the runt. Lowest Supply gains 1 Supply + 1 Action.",effect:"mercy"},{name:"Jealousy Tax",emoji:"\u{1F624}",count:2,desc:"Hoarding too much? The pack noticed. Highest Supply loses 2.",effect:"greed"},{name:"Meltdown",emoji:"\u{1F4A5}",count:1,desc:"Total chaos in the alley! All lose until someone hits 0.",effect:"meltdown"}];
 
@@ -126,19 +126,20 @@ function initGame(players){
   var sd=shuffle(buildDeck(SUPPLY,"s")),ad=shuffle(buildDeck(ACTIONS,"a")),ed=shuffle(buildDeck(EVENTS,"e"));
   var n=players.length,sc=n<=4?3:2,ac=n<=4?4:5;
   var hands=players.map(function(p){return Object.assign({},p,{supply:sd.splice(0,sc),actions:ad.splice(0,ac),eliminated:false,slowedDown:false,sheltered:false});});
-  return{status:"playing",players:hands,supplyDeck:sd,actionDeck:ad,eventDeck:ed,discardSupply:[],discardAction:[],discardEvent:[],currentPlayer:0,cycle:1,turnPhase:"draw",actionsPlayed:0,maxActions:3,log:[{msg:"Game started! Let the raccoon ruckus begin! \u{1F99D}",type:"system"}],firstCycle:true,turnsThisCycle:0,pendingSabotage:null,pendingReaction:null,pendingForesight:null,pendingNightmare:null,version:Date.now()};
+  return{status:"playing",players:hands,supplyDeck:sd,actionDeck:ad,eventDeck:ed,discardSupply:[],discardAction:[],discardEvent:[],currentPlayer:0,cycle:1,turnPhase:"draw",actionsPlayed:0,maxActions:3,log:[{msg:"Game started! Let the raccoon ruckus begin! \u{1F99D}",type:"system"}],firstCycle:true,turnsThisCycle:0,pendingSabotage:null,pendingReaction:null,pendingForesight:null,pendingNightmare:null,pendingCoinDecoy:null,toasts:[],eventCard:null,version:Date.now()};
 }
 
-var S={screen:"menu",name:"",code:"",myIdx:-1,game:null,err:"",poll:null,pTarget:null,showOverlay:null,eventAnim:null};
+var S={screen:"menu",name:"",code:"",myIdx:-1,game:null,err:"",poll:null,pTarget:null,showOverlay:null,eventAnim:null,_shownVer:0};
 var $=document.getElementById("app");
 
-function set(u){Object.assign(S,u);render();}
+function set(u){Object.assign(S,u);if(u.game)displayNotifs(u.game);render();}
+function displayNotifs(g){if(!g||!g.version||g.version===S._shownVer)return;S._shownVer=g.version;if(g.eventCard){S.eventAnim=g.eventCard;setTimeout(function(){S.eventAnim=null;render();},2500);}if(g.toasts)g.toasts.forEach(function(t){showToast(t.emoji,t.text,t.type);});}
 
 function sanitizeGame(g){
   if(!g)return g;
   g.supplyDeck=g.supplyDeck||[];g.actionDeck=g.actionDeck||[];g.eventDeck=g.eventDeck||[];
   g.discardSupply=g.discardSupply||[];g.discardAction=g.discardAction||[];g.discardEvent=g.discardEvent||[];
-  g.log=g.log||[];g.players=g.players||[];
+  g.log=g.log||[];g.players=g.players||[];g.toasts=g.toasts||[];
   for(var p=0;p<g.players.length;p++){g.players[p].supply=g.players[p].supply||[];g.players[p].actions=g.players[p].actions||[];}
   return g;
 }
@@ -178,7 +179,7 @@ window.startGameBtn=async function(){
 };
 
 function hasPendingState(g){
-  return g.pendingSabotage||g.pendingReaction||g.pendingForesight||g.pendingNightmare;
+  return g.pendingSabotage||g.pendingReaction||g.pendingForesight||g.pendingNightmare||g.pendingCoinDecoy;
 }
 
 async function freshGame(){
@@ -195,7 +196,7 @@ async function freshGame(){
 
 window.drawAction=async function(){
   var g=await freshGame();
-  if(g.pendingReaction)return;
+  if(g.pendingReaction||g.pendingCoinDecoy)return;
   var i=S.myIdx;
   if(g.actionDeck.length>0){g.players[i].actions.push(g.actionDeck.shift());g.log.push({msg:S.name+" drew an Action card.",type:"system"});}
   else{g.log.push({msg:"Action deck empty!",type:"warning"});}
@@ -230,7 +231,7 @@ window.execShelter=async function(ci){
   g.discardAction.push(g.players[i].actions.splice(ci,1)[0]);
   g.players[i].sheltered=true;
   g.log.push({msg:S.name+" activated Shelter! Protected from the next Event.",type:"good"});
-  showToast("\u{1F3DA}",S.name+" activated Shelter!","action");
+  g.toasts=[{emoji:"\u{1F3DA}",text:S.name+" activated Shelter!",type:"action"}];
   g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
 };
 
@@ -246,7 +247,7 @@ window.execForesight=async function(ci){
   var top3=g.eventDeck.splice(0,Math.min(3,g.eventDeck.length));
   g.pendingForesight={playerIdx:i,cards:top3};
   g.log.push({msg:S.name+" used Foresight! Peeking at upcoming Events...",type:"event"});
-  showToast("\u{1F441}",S.name+" used Foresight!","action");
+  g.toasts=[{emoji:"\u{1F441}",text:S.name+" used Foresight!",type:"action"}];
   g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
 };
 window.foresightPick=async function(cardIdx){
@@ -284,7 +285,7 @@ window.execCollateral=async function(targets){
       g.log.push({msg:g.players[ti].name+" had no supplies to lose!",type:"warning"});
     }
   }
-  showToast("\u{1F9E8}","Collateral Damage!","loss");
+  g.toasts=[{emoji:"\u{1F9E8}",text:"Collateral Damage!",type:"loss"}];
   g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
 };
 // 2-player Collateral Damage: you lose 1, target loses 2
@@ -308,7 +309,7 @@ window.execCollateral2P=async function(){
     }
   }
   g.log.push({msg:g.players[ti].name+" lost "+tLost+" supply from Collateral Damage!",type:"bad"});
-  showToast("\u{1F9E8}","Collateral Damage (2P)!","loss");
+  g.toasts=[{emoji:"\u{1F9E8}",text:"Collateral Damage (2P)!",type:"loss"}];
   g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
 };
 window.collateralPick=function(ti){
@@ -344,8 +345,8 @@ window.nightmarePick=async function(eventIdx){
   if(!pn||pn.playerIdx!==S.myIdx)return;
   var chosenEvent=pn.events[eventIdx];
   g.log.push({msg:S.name+" triggered Recurring Nightmare: "+chosenEvent.name+"! ("+S.name+" is immune)",type:"event"});
-  showToast("\u{1F608}",S.name+" replayed "+chosenEvent.name+"!","action");
-  showEventAnimation(chosenEvent);
+  g.toasts=[{emoji:"\u{1F608}",text:S.name+" replayed "+chosenEvent.name+"!",type:"action"}];
+  g.eventCard=chosenEvent;
   resolveEvent(g, chosenEvent, pn.playerIdx);
   checkEliminations(g);
   // Check win
@@ -374,14 +375,14 @@ window.execScavenger=async function(ci){
     if(g.actionDeck.length>0){g.players[i].actions.push(g.actionDeck.shift());aDrawn++;}
   }
   g.log.push({msg:S.name+" scavenged from "+deadCount+" fallen player"+(deadCount!==1?"s":"")+"! Drew "+sDrawn+" Supply + "+aDrawn+" Action cards!",type:"good"});
-  showToast("\u{1FABA}",S.name+" scavenged! +"+sDrawn+" Supply +"+aDrawn+" Action","gain");
+  g.toasts=[{emoji:"\u{1F99D}",text:S.name+" scavenged! +"+sDrawn+" Supply +"+aDrawn+" Action",type:"gain"}];
   g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
 };
 
 window.execScrounge=async function(ci){
   var g=await freshGame(),i=S.myIdx;
   g.discardAction.push(g.players[i].actions.splice(ci,1)[0]);
-  if(g.supplyDeck.length>0){var d=g.supplyDeck.shift();g.players[i].supply.push(d);g.log.push({msg:S.name+" scrounged a Supply card!",type:"good"});showToast("\u{1F5D1}",S.name+" scrounged a Supply!","gain");}
+  if(g.supplyDeck.length>0){var d=g.supplyDeck.shift();g.players[i].supply.push(d);g.log.push({msg:S.name+" scrounged a Supply card!",type:"good"});g.toasts=[{emoji:"\u{1F5D1}",text:S.name+" scrounged a Supply!",type:"gain"}];}
   else{g.log.push({msg:"Supply deck empty!",type:"warning"});}
   g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
 };
@@ -390,7 +391,7 @@ window.execHustle=async function(ci){
   g.discardAction.push(g.players[i].actions.splice(ci,1)[0]);
   var d=0;for(var j=0;j<2;j++)if(g.actionDeck.length>0){g.players[i].actions.push(g.actionDeck.shift());d++;}
   g.log.push({msg:S.name+" hustled and drew "+d+" Action card"+(d!==1?"s":"")+"!",type:"good"});
-  showToast("\u{1F4A8}",S.name+" hustled! +"+d+" Actions","action");
+  g.toasts=[{emoji:"\u{1F4A8}",text:S.name+" hustled! +"+d+" Actions",type:"action"}];
   g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
 };
 
@@ -424,7 +425,7 @@ window.execTargeted=async function(ti){
   // Cards that can be Boomeranged: Sabotage, Pilfer, Pickpocket, Slow Down, Coin Toss
   var canBoomerang=targetHasBoomerang(g,ti) && !g.players[ti].eliminated;
   // Cards that can be Decoyed: supply losses from players (Sabotage, Pilfer, Coin Toss)
-  var isSupplyLoss=(card.name==="Sabotage"||card.name==="Pilfer"||card.name==="Coin Toss");
+  var isSupplyLoss=(card.name==="Sabotage"||card.name==="Pilfer");
   var canDecoy=isSupplyLoss && targetHasDecoy(g,ti) && !g.players[ti].eliminated;
 
   if(canBoomerang || canDecoy){
@@ -441,16 +442,17 @@ window.execTargeted=async function(ti){
       resolved:false
     };
     g.log.push({msg:S.name+" played "+card.name+" on "+tn+"! "+tn+" has 10 seconds to react...",type:"event"});
-    showToast(card.emoji,S.name+" played "+card.name+" on "+tn+"!","action");
+    g.toasts=[{emoji:card.emoji,text:S.name+" played "+card.name+" on "+tn+"!",type:"action"}];
     g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
     // Start checking for timeout
     window.checkReactionTimeout();
   } else {
     // No reactions possible — resolve immediately
     g.log.push({msg:S.name+" played "+card.name+" on "+tn+"!",type:"bad"});
-    showToast(card.emoji,S.name+" played "+card.name+" on "+tn+"!","action");
+    g.toasts=[{emoji:card.emoji,text:S.name+" played "+card.name+" on "+tn+"!",type:"action"}];
     resolveTargetedEffect(g, card.name, i, ti);
     g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
+    if(g.pendingCoinDecoy)window.checkCoinDecoyTimeout();
   }
 };
 
@@ -482,16 +484,22 @@ function resolveTargetedEffect(g, cardName, attackerIdx, targetIdx){
     g.log.push({msg:an+" slowed down "+tn+"!",type:"bad"});
   }else if(cardName==="Coin Toss"){
     var heads=Math.random()<0.5;
-    if(heads){
-      g.log.push({msg:an+" flipped HEADS against "+tn+"!",type:"good"});
-      if(g.supplyDeck.length>0){var drawn=g.supplyDeck.shift();g.players[attackerIdx].supply.push(drawn);g.log.push({msg:an+" gained a Supply!",type:"good"});}
-      if(g.players[targetIdx].supply.length>0){var ri3=Math.floor(Math.random()*g.players[targetIdx].supply.length);var lost=g.players[targetIdx].supply.splice(ri3,1)[0];g.discardSupply.push(lost);g.log.push({msg:tn+" lost a Supply!",type:"bad"});}
-      else{g.log.push({msg:tn+" had no supplies to lose!",type:"warning"});}
+    var winnerIdx=heads?attackerIdx:targetIdx;
+    var loserIdx=heads?targetIdx:attackerIdx;
+    var winnerName=g.players[winnerIdx].name;
+    var loserName=g.players[loserIdx].name;
+    g.log.push({msg:an+" flipped "+(heads?"HEADS":"TAILS")+" against "+tn+"!",type:heads?"good":"bad"});
+    g.toasts.push({emoji:"\u{1FA99}",text:an+" flipped "+(heads?"HEADS":"TAILS")+"!",type:heads?"gain":"loss"});
+    // Winner gains supply immediately
+    if(g.supplyDeck.length>0){var drawn=g.supplyDeck.shift();g.players[winnerIdx].supply.push(drawn);g.log.push({msg:winnerName+" gained a Supply!",type:"good"});}
+    // Check if loser has Decoy Stash — offer post-flip
+    var loserHasDecoy=g.players[loserIdx].actions.some(function(a){return a.name==="Decoy Stash";});
+    if(loserHasDecoy&&g.players[loserIdx].supply.length>0){
+      g.pendingCoinDecoy={loserIdx:loserIdx,loserName:loserName,expiresAt:Date.now()+10000};
+      g.log.push({msg:loserName+" can use Decoy Stash to block the supply loss! 10s to react...",type:"event"});
     }else{
-      g.log.push({msg:an+" flipped TAILS against "+tn+"!",type:"bad"});
-      if(g.supplyDeck.length>0){var drawn2=g.supplyDeck.shift();g.players[targetIdx].supply.push(drawn2);g.log.push({msg:tn+" gained a Supply!",type:"good"});}
-      if(g.players[attackerIdx].supply.length>0){var ri4=Math.floor(Math.random()*g.players[attackerIdx].supply.length);var lost2=g.players[attackerIdx].supply.splice(ri4,1)[0];g.discardSupply.push(lost2);g.log.push({msg:an+" lost a Supply!",type:"bad"});}
-      else{g.log.push({msg:an+" had no supplies to lose!",type:"warning"});}
+      if(g.players[loserIdx].supply.length>0){var ri3=Math.floor(Math.random()*g.players[loserIdx].supply.length);var lost=g.players[loserIdx].supply.splice(ri3,1)[0];g.discardSupply.push(lost);g.log.push({msg:loserName+" lost a Supply!",type:"bad"});}
+      else{g.log.push({msg:loserName+" had no supplies to lose!",type:"warning"});}
     }
   }
 }
@@ -507,11 +515,11 @@ window.useBoomerang=async function(newTargetIdx){
   g.discardAction.push(g.players[i].actions.splice(bIdx,1)[0]);
   var newTarget=g.players[newTargetIdx].name;
   g.log.push({msg:S.name+" used Boomerang! Redirected "+pr.cardName+" to "+newTarget+"!",type:"event"});
-  showToast("\u{1FA83}",S.name+" used Boomerang! \u2192 "+newTarget,"reaction");
+  g.toasts=[{emoji:"\u{1FA83}",text:S.name+" used Boomerang! \u2192 "+newTarget,type:"reaction"}];
 
   // Check if NEW target can also Boomerang
   var newCanBoomerang=targetHasBoomerang(g,newTargetIdx)&&!g.players[newTargetIdx].eliminated;
-  var isSupplyLoss=(pr.cardName==="Sabotage"||pr.cardName==="Pilfer"||pr.cardName==="Coin Toss");
+  var isSupplyLoss=(pr.cardName==="Sabotage"||pr.cardName==="Pilfer");
   var newCanDecoy=isSupplyLoss&&targetHasDecoy(g,newTargetIdx)&&!g.players[newTargetIdx].eliminated;
 
   if(newCanBoomerang||newCanDecoy){
@@ -535,6 +543,7 @@ window.useBoomerang=async function(newTargetIdx){
   }
   g.version=Date.now();await DB.set(S.code,g);set({game:g});
   if(g.pendingReaction)window.checkReactionTimeout();
+  if(g.pendingCoinDecoy)window.checkCoinDecoyTimeout();
 };
 
 // Player uses Decoy Stash — absorb the supply loss
@@ -546,7 +555,7 @@ window.useDecoyStash=async function(){
   if(dIdx<0)return;
   g.discardAction.push(g.players[i].actions.splice(dIdx,1)[0]);
   g.log.push({msg:S.name+" used Decoy Stash! "+pr.cardName+" absorbed!",type:"good"});
-  showToast("\u{1FA86}",S.name+" used Decoy Stash! Absorbed!","reaction");
+  g.toasts=[{emoji:"\u{1FA86}",text:S.name+" used Decoy Stash! Absorbed!",type:"reaction"}];
   g.pendingReaction=null;
   g.version=Date.now();await DB.set(S.code,g);set({game:g});
 };
@@ -560,6 +569,55 @@ window.acceptHit=async function(){
   resolveTargetedEffect(g,pr.cardName,pr.attackerIdx,pr.targetIdx);
   g.pendingReaction=null;
   g.version=Date.now();await DB.set(S.code,g);set({game:g});
+  if(g.pendingCoinDecoy)window.checkCoinDecoyTimeout();
+};
+
+// ═══ COIN TOSS DECOY — post-flip reaction ═══
+window.useCoinDecoy=async function(){
+  var g=await freshGame();
+  var pd=g.pendingCoinDecoy;
+  if(!pd||pd.loserIdx!==S.myIdx)return;
+  var dIdx=g.players[S.myIdx].actions.findIndex(function(a){return a.name==="Decoy Stash";});
+  if(dIdx<0)return;
+  g.discardAction.push(g.players[S.myIdx].actions.splice(dIdx,1)[0]);
+  g.log.push({msg:S.name+" used Decoy Stash! Supply loss absorbed!",type:"good"});
+  g.toasts=[{emoji:"\u{1FA86}",text:S.name+" blocked the Coin Toss loss!",type:"reaction"}];
+  g.pendingCoinDecoy=null;
+  g.version=Date.now();await DB.set(S.code,g);set({game:g});
+};
+window.acceptCoinLoss=async function(){
+  var g=await freshGame();
+  var pd=g.pendingCoinDecoy;
+  if(!pd||pd.loserIdx!==S.myIdx)return;
+  if(g.players[pd.loserIdx].supply.length>0){
+    var ri=Math.floor(Math.random()*g.players[pd.loserIdx].supply.length);
+    var lost=g.players[pd.loserIdx].supply.splice(ri,1)[0];
+    g.discardSupply.push(lost);
+    g.log.push({msg:pd.loserName+" lost a Supply from Coin Toss!",type:"bad"});
+    g.toasts=[{emoji:"\u{1FA99}",text:pd.loserName+" lost a Supply!",type:"loss"}];
+  }
+  g.pendingCoinDecoy=null;
+  g.version=Date.now();await DB.set(S.code,g);set({game:g});
+};
+window.checkCoinDecoyTimeout=function(){
+  setTimeout(async function(){
+    var fresh=await DB.get(S.code);
+    if(!fresh||!fresh.pendingCoinDecoy)return;
+    if(Date.now()>=fresh.pendingCoinDecoy.expiresAt){
+      var g=JSON.parse(JSON.stringify(fresh));sanitizeGame(g);
+      var pd=g.pendingCoinDecoy;
+      g.log.push({msg:pd.loserName+" didn't react in time!",type:"warning"});
+      if(g.players[pd.loserIdx].supply.length>0){
+        var ri=Math.floor(Math.random()*g.players[pd.loserIdx].supply.length);
+        var lost=g.players[pd.loserIdx].supply.splice(ri,1)[0];
+        g.discardSupply.push(lost);
+        g.log.push({msg:pd.loserName+" lost a Supply from Coin Toss!",type:"bad"});
+        g.toasts=[{emoji:"\u{1FA99}",text:pd.loserName+" lost a Supply!",type:"loss"}];
+      }
+      g.pendingCoinDecoy=null;
+      g.version=Date.now();await DB.set(S.code,g);set({game:g});
+    }
+  },10500);
 };
 
 // Check if reaction window expired (10 seconds)
@@ -570,12 +628,13 @@ window.checkReactionTimeout=function(){
     if(fresh.pendingReaction.resolved)return;
     if(Date.now()>=fresh.pendingReaction.expiresAt){
       // Time's up — resolve the effect
-      var g=JSON.parse(JSON.stringify(fresh));
+      var g=JSON.parse(JSON.stringify(fresh));sanitizeGame(g);
       var pr=g.pendingReaction;
       g.log.push({msg:g.players[pr.targetIdx].name+" didn't react in time!",type:"warning"});
       resolveTargetedEffect(g,pr.cardName,pr.attackerIdx,pr.targetIdx);
       g.pendingReaction=null;
       g.version=Date.now();await DB.set(S.code,g);set({game:g});
+      if(g.pendingCoinDecoy)window.checkCoinDecoyTimeout();
     }
   },10500);
 };
@@ -584,12 +643,12 @@ window.discardSabo=async function(si){
   var g=await freshGame(),i=S.myIdx;
   var d=g.players[i].supply.splice(si,1)[0];g.discardSupply.push(d);
   g.log.push({msg:S.name+" discarded a Supply from sabotage.",type:"bad"});
-  showToast("\u{1F4A3}",S.name+" lost a Supply to Sabotage!","loss");
+  g.toasts=[{emoji:"\u{1F4A3}",text:S.name+" lost a Supply to Sabotage!",type:"loss"}];
   g.pendingSabotage=null;g.version=Date.now();await DB.set(S.code,g);set({game:g});
 };
 window.endTurn=async function(){
   var g=await freshGame();
-  if(g.pendingReaction)return;
+  if(g.pendingReaction||g.pendingCoinDecoy)return;
   var alive=g.players.filter(function(p){return!p.eliminated;});
   g.log.push({msg:S.name+" ended their turn.",type:"system"});g.turnsThisCycle++;g.actionsPlayed=0;g.turnPhase="draw";
   var nx=(g.currentPlayer+1)%g.players.length,lp=0;
@@ -605,7 +664,7 @@ window.endTurn=async function(){
       g.discardEvent.push(evt);
       g.log.push({msg:"=== EVENT: "+evt.name+" "+evt.emoji+" ===",type:"event"});
       g.log.push({msg:evt.desc,type:"event"});
-      showEventAnimation(evt);
+      g.eventCard=evt;g.toasts=[];
       resolveEvent(g, evt, -1); // -1 means no immunity
     }else{
       g.log.push({msg:"=== No Events left in deck! ===",type:"warning"});
@@ -747,11 +806,11 @@ function checkEliminations(g){
       if(lrIdx>=0){
         g.discardAction.push(g.players[p].actions.splice(lrIdx,1)[0]);
         g.log.push({msg:g.players[p].name+" used Last Resort to survive!",type:"good"});
-        showToast("\u{1FA82}",g.players[p].name+" used Last Resort!","reaction");
+        g.toasts.push({emoji:"\u{1FA82}",text:g.players[p].name+" used Last Resort!",type:"reaction"});
       }else{
         g.players[p].eliminated=true;
         g.log.push({msg:g.players[p].name+" has been ELIMINATED! Forced to lose more than they had!",type:"bad"});
-        showToast("\u{2620}",g.players[p].name+" ELIMINATED!","loss");
+        g.toasts.push({emoji:"\u{2620}",text:g.players[p].name+" ELIMINATED!",type:"loss"});
       }
     }
   }
@@ -808,11 +867,6 @@ function renderRules(){
   return h;
 }
 
-function showEventAnimation(evt){
-  S.eventAnim=evt;
-  render();
-  setTimeout(function(){S.eventAnim=null;render();},2500);
-}
 
 function renderEventAnim(){
   if(!S.eventAnim)return'';
@@ -892,6 +946,17 @@ function renderGame(){
       h+='<div class="panel" style="border:1px solid var(--amber)"><p style="font-size:13px;color:var(--amber)">&#9889; '+esc(pr.attackerName)+' played '+esc(pr.cardName)+' on '+esc(pr.targetName)+'! Waiting for reaction... ('+secsLeft+'s)</p></div>';
     }
   }
+  // Coin Toss Decoy reaction UI
+  var pd=g.pendingCoinDecoy;
+  if(pd){
+    var imLoser=pd.loserIdx===S.myIdx;
+    var cdSecsLeft=Math.max(0,Math.ceil((pd.expiresAt-Date.now())/1000));
+    if(imLoser){
+      h+='<div class="panel" style="border:2px solid var(--amber);background:#1e1a10"><p style="font-size:14px;font-weight:700;color:var(--amber);margin-bottom:4px">&#x1FA99; You lost the Coin Toss!</p><p style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Use Decoy Stash to block the supply loss? ('+cdSecsLeft+'s)</p><div><button class="btn-small" style="background:var(--green);color:#000;margin-right:4px" onclick="useCoinDecoy()">&#x1FA86; Use Decoy Stash</button><button class="btn-small" style="background:var(--surface-light);color:var(--text-dim)" onclick="acceptCoinLoss()">Accept Loss</button></div></div>';
+    }else{
+      h+='<div class="panel" style="border:1px solid var(--amber)"><p style="font-size:13px;color:var(--amber)">&#x1FA99; '+esc(pd.loserName)+' lost the Coin Toss! Waiting for reaction... ('+cdSecsLeft+'s)</p></div>';
+    }
+  }
   var chips=g.players.map(function(p,i){var cls=p.eliminated?"chip-dead":i===g.currentPlayer?"chip-active":"";return'<div class="chip '+cls+'"><span style="font-weight:700">'+esc(p.name)+'</span>'+(i===S.myIdx?'<span style="color:var(--blue)"> (you)</span>':'')+'<span style="color:var(--green);margin-left:6px">'+(p.eliminated?'&#9760;':'&#128230;'+p.supply.length)+'</span>'+(p.eliminated?'':'<span style="color:var(--amber);margin-left:4px">&#127183;'+p.actions.length+'</span>')+(p.slowedDown&&!p.eliminated?'<span style="margin-left:4px">&#128012;</span>':'')+(p.sheltered&&!p.eliminated?'<span style="margin-left:4px">&#x1F3DA;</span>':'')+'</div>';}).join("");
   h+='<div class="panel"><div class="label" style="color:var(--text-dim)">PLAYERS</div><div class="players-bar">'+chips+'</div></div>';
   if(S.pTarget){
@@ -925,7 +990,7 @@ function renderGame(){
     h+='<div class="panel" style="border:1px solid var(--red)"><p style="font-size:13px;color:var(--red)">&#x1F608; '+esc(g.players[g.pendingNightmare.playerIdx].name)+' is choosing a Recurring Nightmare...</p></div>';
   }
   if(me&&!me.eliminated){var scs=me.supply.length===0?'<p style="font-size:12px;color:var(--text-dim)">No supplies! You are in danger!</p>':me.supply.map(function(s){return'<div class="card card-s"><span class="emoji">'+s.emoji+'</span><span class="cname">'+esc(s.name)+'</span>'+(s.value===2?'<span class="badge badge-amber" style="margin-top:3px;font-size:9px">x2</span>':'')+'</div>';}).join("");h+='<div class="panel"><div class="label" style="color:var(--green)">YOUR SUPPLIES ('+me.supply.length+')</div><div class="cards-row">'+scs+'</div></div>';}
-  if(me&&!me.eliminated){var hasPending=!!g.pendingReaction;var canPlay=myTurn&&g.turnPhase==="play"&&g.actionsPlayed<g.maxActions&&!hasPending;var acs=me.actions.length===0?'<p style="font-size:12px;color:var(--text-dim)">No actions!</p>':me.actions.map(function(a,i){var ok=canPlay&&CORE.indexOf(a.name)>=0;var dash=a.type==="reaction"?"card-dash":"";return'<div class="card card-a '+dash+' '+(ok?"card-play":"card-dim")+'" '+(ok?'onclick="playCard('+i+')"':'')+'><span class="emoji">'+a.emoji+'</span><span class="cname">'+esc(a.name)+'</span><span class="cdesc">'+esc(a.desc)+'</span>'+(a.type==="reaction"?'<span class="badge badge-red" style="margin-top:3px;font-size:8px">REACT</span>':'')+(a.type==="special"?'<span class="badge badge-blue" style="margin-top:3px;font-size:8px">SPECIAL</span>':'')+'</div>';}).join("");h+='<div class="panel"><div class="label" style="color:var(--amber)">YOUR ACTIONS ('+me.actions.length+')'+(canPlay?' <span style="color:var(--text-dim);font-weight:400">&mdash; tap to play ('+g.actionsPlayed+'/'+g.maxActions+')</span>':'')+(hasPending&&myTurn?' <span style="color:var(--red);font-weight:400">&mdash; waiting for reaction to resolve</span>':'')+'</div><div class="cards-row">'+acs+'</div></div>';}
+  if(me&&!me.eliminated){var hasPending=!!(g.pendingReaction||g.pendingCoinDecoy);var canPlay=myTurn&&g.turnPhase==="play"&&g.actionsPlayed<g.maxActions&&!hasPending;var acs=me.actions.length===0?'<p style="font-size:12px;color:var(--text-dim)">No actions!</p>':me.actions.map(function(a,i){var ok=canPlay&&CORE.indexOf(a.name)>=0;var dash=a.type==="reaction"?"card-dash":"";return'<div class="card card-a '+dash+' '+(ok?"card-play":"card-dim")+'" '+(ok?'onclick="playCard('+i+')"':'')+'><span class="emoji">'+a.emoji+'</span><span class="cname">'+esc(a.name)+'</span><span class="cdesc">'+esc(a.desc)+'</span>'+(a.type==="reaction"?'<span class="badge badge-red" style="margin-top:3px;font-size:8px">REACT</span>':'')+(a.type==="special"?'<span class="badge badge-blue" style="margin-top:3px;font-size:8px">SPECIAL</span>':'')+'</div>';}).join("");h+='<div class="panel"><div class="label" style="color:var(--amber)">YOUR ACTIONS ('+me.actions.length+')'+(canPlay?' <span style="color:var(--text-dim);font-weight:400">&mdash; tap to play ('+g.actionsPlayed+'/'+g.maxActions+')</span>':'')+(hasPending&&myTurn?' <span style="color:var(--red);font-weight:400">&mdash; waiting for reaction to resolve</span>':'')+'</div><div class="cards-row">'+acs+'</div></div>';}
   if(myTurn&&!winner&&me&&!me.eliminated&&!g.pendingReaction){if(g.turnPhase==="draw")h+='<button class="btn btn-amber" onclick="drawAction()">&#127183; Draw Action Card</button>';else h+='<button class="btn btn-green" onclick="endTurn()">&#10003; End Turn '+(g.actionsPlayed>0?'('+g.actionsPlayed+' played)':'(pass)')+'</button>';}
   if(me&&me.eliminated)h+='<div class="panel" style="text-align:center;border:2px solid var(--red)"><div style="font-size:30px;margin-bottom:6px">&#9760;</div><p style="font-weight:700;color:var(--red)">You have been eliminated!</p><p style="font-size:12px;color:var(--text-dim)">Spectating...</p></div>';
   var logs=(g.log||[]).slice(-20).map(function(e){return'<div class="log-entry log-'+e.type+'">'+esc(e.msg)+'</div>';}).join("");

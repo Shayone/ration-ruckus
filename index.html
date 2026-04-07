@@ -230,7 +230,7 @@ window.execShelter=async function(ci){
   g.discardAction.push(g.players[i].actions.splice(ci,1)[0]);
   g.players[i].sheltered=true;
   g.log.push({msg:S.name+" activated Shelter! Protected from the next Event.",type:"good"});
-  showToast("\u{1F6D6}",S.name+" activated Shelter!","action");
+  showToast("\u{1F3DA}",S.name+" activated Shelter!","action");
   g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
 };
 
@@ -381,7 +381,7 @@ window.execScavenger=async function(ci){
 window.execScrounge=async function(ci){
   var g=await freshGame(),i=S.myIdx;
   g.discardAction.push(g.players[i].actions.splice(ci,1)[0]);
-  if(g.supplyDeck.length>0){var d=g.supplyDeck.shift();g.players[i].supply.push(d);g.log.push({msg:S.name+" scrounged a Supply card!",type:"good"});showToast("\u{1F50D}",S.name+" scrounged a Supply!","gain");}
+  if(g.supplyDeck.length>0){var d=g.supplyDeck.shift();g.players[i].supply.push(d);g.log.push({msg:S.name+" scrounged a Supply card!",type:"good"});showToast("\u{1F5D1}",S.name+" scrounged a Supply!","gain");}
   else{g.log.push({msg:"Supply deck empty!",type:"warning"});}
   g.actionsPlayed++;g.version=Date.now();await DB.set(S.code,g);set({game:g,pTarget:null});
 };
@@ -428,7 +428,7 @@ window.execTargeted=async function(ti){
   var canDecoy=isSupplyLoss && targetHasDecoy(g,ti) && !g.players[ti].eliminated;
 
   if(canBoomerang || canDecoy){
-    // Enter reaction window — 5 second timer
+    // Enter reaction window — 10 second timer
     g.pendingReaction={
       cardName:card.name,
       attackerIdx:i,
@@ -511,7 +511,7 @@ window.useBoomerang=async function(newTargetIdx){
 
   // Check if NEW target can also Boomerang
   var newCanBoomerang=targetHasBoomerang(g,newTargetIdx)&&!g.players[newTargetIdx].eliminated;
-  var isSupplyLoss=(pr.cardName==="Sabotage"||pr.cardName==="Pilfer");
+  var isSupplyLoss=(pr.cardName==="Sabotage"||pr.cardName==="Pilfer"||pr.cardName==="Coin Toss");
   var newCanDecoy=isSupplyLoss&&targetHasDecoy(g,newTargetIdx)&&!g.players[newTargetIdx].eliminated;
 
   if(newCanBoomerang||newCanDecoy){
@@ -562,7 +562,7 @@ window.acceptHit=async function(){
   g.version=Date.now();await DB.set(S.code,g);set({game:g});
 };
 
-// Check if reaction window expired (5 seconds)
+// Check if reaction window expired (10 seconds)
 window.checkReactionTimeout=function(){
   setTimeout(async function(){
     var fresh=await DB.get(S.code);
@@ -846,7 +846,7 @@ function render(){
 }
 
 function renderMenu(){
-  $.innerHTML='<div style="margin-top:60px"><div class="title" style="font-size:36px"><span class="g">Ration</span> <span class="r">Ruckus!</span></div><p class="sub" style="margin-bottom:40px">A Raccoon's Guide to Survival</p><div class="form-stack"><button class="btn btn-amber" onclick="set({screen:\'create\'})">Create Game</button><button class="btn btn-green" onclick="set({screen:\'join\'})">Join Game</button><button class="btn btn-dim" onclick="set({showOverlay:\'decklist\'})">&#127183; View All Cards</button><button class="btn btn-dim" onclick="set({showOverlay:\'rules\'})">&#128214; Rules</button><button class="btn btn-dim" style="font-size:12px" onclick="set({screen:\'setup\'})">'+(FIREBASE_URL?"&#10004; Firebase Connected":"&#9881; Setup Firebase (for online play)")+'</button>'+(FIREBASE_URL?'':'<p class="note">Without Firebase, multiplayer only works in 2 browser tabs on same device.</p>')+'<p class="note">&#x1F99D; Raccoon Edition &mdash; Fully playable!<br>All cards, events, elimination &amp; win condition active.<br>Trade-ins coming soon.</p></div></div>';
+  $.innerHTML='<div style="margin-top:60px"><div class="title" style="font-size:36px"><span class="g">Ration</span> <span class="r">Ruckus!</span></div><p class="sub" style="margin-bottom:40px">A Raccoon&#39;s Guide to Survival</p><div class="form-stack"><button class="btn btn-amber" onclick="set({screen:\'create\'})">Create Game</button><button class="btn btn-green" onclick="set({screen:\'join\'})">Join Game</button><button class="btn btn-dim" onclick="set({showOverlay:\'decklist\'})">&#127183; View All Cards</button><button class="btn btn-dim" onclick="set({showOverlay:\'rules\'})">&#128214; Rules</button><button class="btn btn-dim" style="font-size:12px" onclick="set({screen:\'setup\'})">'+(FIREBASE_URL?"&#10004; Firebase Connected":"&#9881; Setup Firebase (for online play)")+'</button>'+(FIREBASE_URL?'':'<p class="note">Without Firebase, multiplayer only works in 2 browser tabs on same device.</p>')+'<p class="note">&#x1F99D; Raccoon Edition &mdash; Fully playable!<br>All cards, events, elimination &amp; win condition active.<br>Trade-ins coming soon.</p></div></div>';
 }
 
 function renderForm(){
@@ -892,7 +892,7 @@ function renderGame(){
       h+='<div class="panel" style="border:1px solid var(--amber)"><p style="font-size:13px;color:var(--amber)">&#9889; '+esc(pr.attackerName)+' played '+esc(pr.cardName)+' on '+esc(pr.targetName)+'! Waiting for reaction... ('+secsLeft+'s)</p></div>';
     }
   }
-  var chips=g.players.map(function(p,i){var cls=p.eliminated?"chip-dead":i===g.currentPlayer?"chip-active":"";return'<div class="chip '+cls+'"><span style="font-weight:700">'+esc(p.name)+'</span>'+(i===S.myIdx?'<span style="color:var(--blue)"> (you)</span>':'')+'<span style="color:var(--green);margin-left:6px">'+(p.eliminated?'&#9760;':'&#128230;'+p.supply.length)+'</span>'+(p.eliminated?'':'<span style="color:var(--amber);margin-left:4px">&#127183;'+p.actions.length+'</span>')+(p.slowedDown&&!p.eliminated?'<span style="margin-left:4px">&#128012;</span>':'')+(p.sheltered&&!p.eliminated?'<span style="margin-left:4px">&#x1F6D6;</span>':'')+'</div>';}).join("");
+  var chips=g.players.map(function(p,i){var cls=p.eliminated?"chip-dead":i===g.currentPlayer?"chip-active":"";return'<div class="chip '+cls+'"><span style="font-weight:700">'+esc(p.name)+'</span>'+(i===S.myIdx?'<span style="color:var(--blue)"> (you)</span>':'')+'<span style="color:var(--green);margin-left:6px">'+(p.eliminated?'&#9760;':'&#128230;'+p.supply.length)+'</span>'+(p.eliminated?'':'<span style="color:var(--amber);margin-left:4px">&#127183;'+p.actions.length+'</span>')+(p.slowedDown&&!p.eliminated?'<span style="margin-left:4px">&#128012;</span>':'')+(p.sheltered&&!p.eliminated?'<span style="margin-left:4px">&#x1F3DA;</span>':'')+'</div>';}).join("");
   h+='<div class="panel"><div class="label" style="color:var(--text-dim)">PLAYERS</div><div class="players-bar">'+chips+'</div></div>';
   if(S.pTarget){
     if(S.pTarget.twoPlayer){

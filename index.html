@@ -187,6 +187,7 @@ async function freshGame(){
     var f=await DB.get(S.code);
     if(f){
       sanitizeGame(f);
+      f.eventCard=null;f.toasts=[];
       S.game=JSON.parse(JSON.stringify(f));
       return JSON.parse(JSON.stringify(f));
     }
